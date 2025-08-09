@@ -39,11 +39,6 @@ void moter_direction_D(int front){
 }
 
 
-void loop() {
-
-}
-
-
 void moter_front(int on_off, int front){
   if(on_off == 1)
   {
@@ -134,6 +129,7 @@ void moter_BC(int on_off,int front)
   }
 }
 
+
 void moter_supin(int on_off,int front)
 {
   if(on_off == 1)
@@ -157,4 +153,12 @@ void moter_supin(int on_off,int front)
       moter_direction_D(HIGH);
     }
   }
+}
+
+
+void loop() {
+  moter_front(1, 1);
+  moter_right(0, 0);
+  moter_AD(0, 0);
+  moter_BC(0, 0);
 }
