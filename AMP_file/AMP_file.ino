@@ -1,4 +1,4 @@
-const int pwm_a = 2;
+const int pwm_a = 2;        //abcdの
 const int direction_a = 30;
 const int pwm_b = 5;
 const int direction_c = 33;
