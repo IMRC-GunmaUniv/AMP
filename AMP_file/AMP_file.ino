@@ -51,7 +51,7 @@ void moter_front(int on_off, int front)//前か後ろに移動
     if (front == 1)
     {
       moter_direction_A(HIGH);
-        moter_direction_B(HIGH);
+      moter_direction_B(HIGH);
       moter_direction_C(HIGH);
       moter_direction_D(HIGH);
     }else{
@@ -89,7 +89,7 @@ void moter_right(int on_off, int front)//右と左に移動
 }
 
 
-void moter_AD(int on_off,int flont)//傾き正の向きに移動する関数//
+void moter_AD(int on_off,int front)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
   {
