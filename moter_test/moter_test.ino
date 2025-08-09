@@ -22,3 +22,4 @@ void loop() {
   moter_direction();
   moter_pwm();
 }
+//あほ //
