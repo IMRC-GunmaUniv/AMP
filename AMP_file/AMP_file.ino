@@ -1,4 +1,4 @@
-const int pwm_a = 2;        //abcdの
+const int pwm_a = 2;       //abcdのpwmとdirectonの数の決定//
 const int direction_a = 30;
 const int pwm_b = 5;
 const int direction_c = 33;
@@ -86,7 +86,7 @@ void moter_right(int on_off, int front){
 }
 
 
-void moter_AD(int on_off,int flont)
+void moter_AD(int on_off,int flont)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
   {
@@ -108,7 +108,7 @@ void moter_AD(int on_off,int flont)
 }
 
 
-void moter_BC(int on_off,int front)
+void moter_BC(int on_off,int front)//傾き負の向きに移動する関数//
 {
   if(on_off == 1)
   {
@@ -130,7 +130,7 @@ void moter_BC(int on_off,int front)
 }
 
 
-void moter_supin(int on_off,int front)
+void moter_supin(int on_off,int front)//回転する関数//
 {
   if(on_off == 1)
   {
