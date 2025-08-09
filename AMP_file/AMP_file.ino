@@ -44,7 +44,7 @@ void moter_front(int on_off, int front)//前か後ろに移動
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a, 255);
+    analogWrite(pwm_a,255);
     analogWrite(pwm_b,255);
     analogWrite(pwm_c,255);
     analogWrite(pwm_d,255);
