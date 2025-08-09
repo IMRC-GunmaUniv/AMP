@@ -44,37 +44,45 @@ void loop() {
 }
 
 
-void moter_AD(int flont)
+void moter_AD(int on_off,int flont)
 {
-  analogWrite(pwm_a,255);
-  analogWrite(pwm_b,0);
-  analogWrite(pwm_c,0);
-  analogWrite(pwm_d,255);
-  if(front == 1)
+  if(on_off == 1)
   {
-    moter_direction_A(HIGH)
-    moter_direction_D(HIGH)
-  }else
-  {
-    moter_direction_A(LOW)
-    moter_direction_D(LOW)
-  }
+    analogWrite(pwm_a,255);
+    analogWrite(pwm_b,0);
+    analogWrite(pwm_c,0);
+    analogWrite(pwm_d,255);
+    if(front == 1)
+    {
+      moter_direction_A(HIGH);
+      moter_direction_D(HIGH);
+    }
+    else
+    {
+      moter_direction_A(LOW);
+      moter_direction_D(LOW);
+    }
+  } 
 }
 
 
-void moter_BC(int front)
+void moter_BC(int on_off,int front)
 {
-  analogWrite(pwm_a,0);
-  analogWrite(pwm_b,255);
-  analogWrite(pwm_c,255);
-  analogWrite(pwm_d,0);
-  if(front == 1)
+  if(on_off == 1)
   {
-    moter_direction_B(HIGH)
-    moter_direction_D(HIGH)
-  }else
-  {
-    moter_direction_B(LOW)
-    moter_direction_D(LOW)
+    analogWrite(pwm_a,0);
+    analogWrite(pwm_b,255);
+    analogWrite(pwm_c,255);
+    analogWrite(pwm_d,0);
+    if(front == 1)
+    {
+      moter_direction_B(HIGH);
+      moter_direction_D(HIGH);
+    }
+    else
+    {
+      moter_direction_B(LOW);
+      moter_direction_D(LOW);
+    } 
   }
 }
