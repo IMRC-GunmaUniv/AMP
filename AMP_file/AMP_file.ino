@@ -11,6 +11,7 @@ const int direction_d = 34;
 
 
 void setup() {
+  //pinModeでそれぞれのモーターを定義//
   pinMode(pwm_a, OUTPUT);
   pinMode(direction_a, OUTPUT);
   pinMode(pwm_b, OUTPUT);
@@ -21,7 +22,7 @@ void setup() {
   pinMode(direction_d, OUTPUT);
 }
 
-
+//それぞれのモーターの回転の向きを定義//
 void moter_direction_A(int front){
   digitalWrite(direction_a, front);
 }
@@ -39,7 +40,8 @@ void moter_direction_D(int front){
 }
 
 
-void moter_front(int on_off, int front){
+void moter_front(int on_off, int front)//前か後ろに移動
+{
   if(on_off == 1)
   {
     analogWrite(pwm_a, 255);
@@ -63,7 +65,8 @@ void moter_front(int on_off, int front){
 }
 
 
-void moter_right(int on_off, int front){
+void moter_right(int on_off, int front)//右と左に移動
+{
   if(on_off == 1)
   {
     analogWrite(pwm_a, 255);
