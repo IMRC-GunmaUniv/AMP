@@ -1,9 +1,9 @@
 const int pwm_a = 2;       //abcdのpwmとdirectonの数の決定//
 const int direction_a = 30;
 const int pwm_b = 5;
-const int direction_c = 33;
+const int direction_b = 33;
 const int pwm_c = 3;
-const int direction_b = 31;
+const int direction_c = 31;
 const int pwm_d = 6;
 const int direction_d = 34;
 
@@ -51,13 +51,13 @@ void moter_front(int on_off, int front)//前か後ろに移動
     if (front == 1)
     {
       moter_direction_A(HIGH);
-      moter_direction_B(HIGH);
-      moter_direction_C(HIGH);
+      moter_direction_B(LOW);
+      moter_direction_C(LOW);
       moter_direction_D(HIGH);
     }else{
       moter_direction_A(LOW);
-      moter_direction_B(LOW);
-      moter_direction_C(LOW);
+      moter_direction_B(HIGH);
+      moter_direction_C(HIGH);
       moter_direction_D(LOW);
     }
   }
@@ -76,14 +76,14 @@ void moter_right(int on_off, int front)//右と左に移動
     if (front == 1)
     {
       moter_direction_A(HIGH);
-      moter_direction_B(LOW);
+      moter_direction_B(HIGH);
       moter_direction_C(HIGH);
-      moter_direction_D(LOW);
+      moter_direction_D(HIGH);
     }else{
       moter_direction_A(LOW);
-      moter_direction_B(HIGH);
+      moter_direction_B(LOW);
       moter_direction_C(LOW);
-      moter_direction_D(HIGH);
+      moter_direction_D(LOW);
     }
   }
 }
@@ -121,19 +121,19 @@ void moter_BC(int on_off,int front)//傾き負の向きに移動する関数//
     analogWrite(pwm_d,0);
     if(front == 1)
     {
-      moter_direction_B(HIGH);
-      moter_direction_C(HIGH);
+      moter_direction_B(LOW);
+      moter_direction_C(LOW);
     }
     else
     {
-      moter_direction_B(LOW);
-      moter_direction_C(LOW);
+      moter_direction_B(HIGH);
+      moter_direction_C(HIGH);
     } 
   }
 }
 
 
-void moter_supin(int on_off,int front)//回転する関数//
+void moter_spin(int on_off, int left)//回転する関数//
 {
   if(on_off == 1)
   {
@@ -141,18 +141,18 @@ void moter_supin(int on_off,int front)//回転する関数//
     analogWrite(pwm_b,255);
     analogWrite(pwm_c,255);
     analogWrite(pwm_d,255);
-    if (front == 1)
+    if (left == 1)
     {
       moter_direction_A(HIGH);
-      moter_direction_B(HIGH);
-      moter_direction_C(LOW);
+      moter_direction_B(LOW);
+      moter_direction_C(HIGH);
       moter_direction_D(LOW);
     }
     else
     {
       moter_direction_A(LOW);
-      moter_direction_B(LOW);
-      moter_direction_C(HIGH);
+      moter_direction_B(HIGH);
+      moter_direction_C(LOW);
       moter_direction_D(HIGH);
     }
   }
@@ -160,8 +160,9 @@ void moter_supin(int on_off,int front)//回転する関数//
 
 
 void loop() {
-  moter_front(1, 1);
+  moter_front(0, 0);
   moter_right(0, 0);
   moter_AD(0, 0);
   moter_BC(0, 0);
+  moter_spin(1, 0);
 }
