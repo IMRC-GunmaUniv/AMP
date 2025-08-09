@@ -19,3 +19,19 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 }
+
+
+void moter_AD(flont)
+{
+  analogWrite(pwm_a,255);
+  analogWrite(pwm_b,0);
+  analogWrite(pwm_c,0);
+  analogWrite(pwm_d,255);
+  if(front == 1)
+  {
+    moter_
+  }
+}
+
+
+void moter_BD
