@@ -46,13 +46,13 @@ void loop() {
 
 void moter_AD(int on_off,int flont)
 {
-  if(on_off == 1)
+  if(on_off == 1) //動かすモーターを固定//
   {
     analogWrite(pwm_a,255);
     analogWrite(pwm_b,0);
     analogWrite(pwm_c,0);
     analogWrite(pwm_d,255);
-    if(front == 1)
+    if(front == 1)//モーターの回転の向き//
     {
       moter_direction_A(HIGH);
       moter_direction_D(HIGH);
