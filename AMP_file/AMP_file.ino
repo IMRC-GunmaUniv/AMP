@@ -11,7 +11,6 @@ const int direction_d = 34;
 
 
 void setup() {
-  // put your setup code here, to run once:
   pinMode(pwm_a, OUTPUT);
   pinMode(direction_a, OUTPUT);
   pinMode(pwm_b, OUTPUT);
@@ -39,10 +38,53 @@ void moter_direction_D(int front){
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 
 }
 
+void moter_front(int on_off, int front){
+  if(on_off == 1)
+  {
+    analogWrite(pwm_a, 255);
+    analogWrite(pwm_b,255);
+    analogWrite(pwm_c,255);
+    analogWrite(pwm_d,255);
+    if (front == 1)
+    {
+      moter_direction_A(HIGH);
+        moter_direction_B(HIGH);
+      moter_direction_C(HIGH);
+      moter_direction_D(HIGH);
+    }else{
+      moter_direction_A(LOW);
+      moter_direction_B(LOW);
+      moter_direction_C(LOW);
+      moter_direction_D(LOW);
+    }
+  }
+  
+}
+
+void moter_right(int on_off, int front){
+  if(on_off == 1)
+  {
+    analogWrite(pwm_a, 255);
+    analogWrite(pwm_b,255);
+    analogWrite(pwm_c,255);
+    analogWrite(pwm_d,255);
+    if (front == 1)
+    {
+      moter_direction_A(HIGH);
+      moter_direction_B(LOW);
+      moter_direction_C(HIGH);
+      moter_direction_D(LOW);
+    }else{
+      moter_direction_A(LOW);
+      moter_direction_B(HIGH);
+      moter_direction_C(LOW);
+      moter_direction_D(HIGH);
+    }
+  }
+}
 
 void moter_AD(flont)
 {
