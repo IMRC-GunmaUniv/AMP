@@ -22,6 +22,22 @@ void setup() {
   pinMode(direction_d, OUTPUT);
 }
 
+void moter_direction_A(int front){
+  digitalWrite(direction_a, front);
+}
+
+void moter_direction_B(int front){
+  digitalWrite(direction_b, front);
+}
+
+void moter_direction_C(int front){
+  digitalWrite(direction_c, front);
+}
+
+void moter_direction_D(int front){
+  digitalWrite(direction_d, front);
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
 
