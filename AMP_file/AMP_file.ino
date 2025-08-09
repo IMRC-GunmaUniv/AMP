@@ -1,18 +1,25 @@
 const int pwm_a = 2;
-const int derection_a = 30;
+const int direction_a = 30;
 const int pwm_b = 5;
-const int derection_c = 33;
+const int direction_c = 33;
 const int pwm_c = 3;
-const int derection_b = 31;
+const int direction_b = 31;
 const int pwm_d = 6;
-const int derection_d = 34;
+const int direction_d = 34;
 
 
 
 
 void setup() {
   // put your setup code here, to run once:
-
+  pinMode(pwm_a, OUTPUT);
+  pinMode(direction_a, OUTPUT);
+  pinMode(pwm_b, OUTPUT);
+  pinMode(direction_b, OUTPUT);
+  pinMode(pwm_c, OUTPUT);
+  pinMode(direction_c, OUTPUT);
+  pinMode(pwm_d, OUTPUT);
+  pinMode(direction_d, OUTPUT);
 }
 
 void loop() {
