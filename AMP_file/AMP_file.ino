@@ -21,6 +21,7 @@ void setup() {
   pinMode(direction_d, OUTPUT);
 }
 
+
 void moter_direction_A(int front){
   digitalWrite(direction_a, front);
 }
@@ -37,9 +38,11 @@ void moter_direction_D(int front){
   digitalWrite(direction_d, front);
 }
 
+
 void loop() {
 
 }
+
 
 void moter_front(int on_off, int front){
   if(on_off == 1)
@@ -64,6 +67,7 @@ void moter_front(int on_off, int front){
   
 }
 
+
 void moter_right(int on_off, int front){
   if(on_off == 1)
   {
@@ -85,6 +89,7 @@ void moter_right(int on_off, int front){
     }
   }
 }
+
 
 void moter_AD(int on_off,int flont)
 {
@@ -119,12 +124,37 @@ void moter_BC(int on_off,int front)
     if(front == 1)
     {
       moter_direction_B(HIGH);
-      moter_direction_D(HIGH);
+      moter_direction_C(HIGH);
     }
     else
     {
       moter_direction_B(LOW);
-      moter_direction_D(LOW);
+      moter_direction_C(LOW);
     } 
+  }
+}
+
+void moter_supin(int on_off,int front)
+{
+  if(on_off == 1)
+  {
+    analogWrite(pwm_a,255);
+    analogWrite(pwm_b,255);
+    analogWrite(pwm_c,255);
+    analogWrite(pwm_d,255);
+    if (front == 1)
+    {
+      moter_direction_A(HIGH);
+      moter_direction_B(HIGH);
+      moter_direction_C(LOW);
+      moter_direction_D(LOW);
+    }
+    else
+    {
+      moter_direction_A(LOW);
+      moter_direction_B(LOW);
+      moter_direction_C(HIGH);
+      moter_direction_D(HIGH);
+    }
   }
 }
