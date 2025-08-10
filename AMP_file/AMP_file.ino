@@ -44,10 +44,10 @@ void moter_front(int on_off, int front)//前か後ろに移動
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a,255);
-    analogWrite(pwm_b,255);
-    analogWrite(pwm_c,255);
-    analogWrite(pwm_d,255);
+    analogWrite(pwm_a, 66);
+    analogWrite(pwm_b, 66);
+    analogWrite(pwm_c, 66);
+    analogWrite(pwm_d, 66);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -60,8 +60,7 @@ void moter_front(int on_off, int front)//前か後ろに移動
       moter_direction_C(HIGH);
       moter_direction_D(LOW);
     }
-  }
-  
+  }  
 }
 
 
@@ -69,10 +68,10 @@ void moter_right(int on_off, int front)//右と左に移動
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a, 255);
-    analogWrite(pwm_b,255);
-    analogWrite(pwm_c,255);
-    analogWrite(pwm_d,255);
+    analogWrite(pwm_a, 66);
+    analogWrite(pwm_b, 66);
+    analogWrite(pwm_c, 66);
+    analogWrite(pwm_d, 66);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -93,10 +92,10 @@ void moter_AD(int on_off,int front)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
   {
-    analogWrite(pwm_a,255);
+    analogWrite(pwm_a, 66);
     analogWrite(pwm_b,0);
     analogWrite(pwm_c,0);
-    analogWrite(pwm_d,255);
+    analogWrite(pwm_d, 66);
     if(front == 1)//モーターの回転の向き//
     {
       moter_direction_A(HIGH);
@@ -116,8 +115,8 @@ void moter_BC(int on_off,int front)//傾き負の向きに移動する関数//
   if(on_off == 1)
   {
     analogWrite(pwm_a,0);
-    analogWrite(pwm_b,255);
-    analogWrite(pwm_c,255);
+    analogWrite(pwm_b, 66);
+    analogWrite(pwm_c, 66);
     analogWrite(pwm_d,0);
     if(front == 1)
     {
@@ -137,10 +136,10 @@ void moter_spin(int on_off, int left)//回転する関数//
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a,255);
-    analogWrite(pwm_b,255);
-    analogWrite(pwm_c,255);
-    analogWrite(pwm_d,255);
+    analogWrite(pwm_a, 66);
+    analogWrite(pwm_b, 66);
+    analogWrite(pwm_c, 66);
+    analogWrite(pwm_d, 66);
     if (left == 1)
     {
       moter_direction_A(HIGH);
@@ -158,11 +157,49 @@ void moter_spin(int on_off, int left)//回転する関数//
   }
 }
 
-
-void loop() {
+void moter_initialization() //モータの動きを初期化
+{
   moter_front(0, 0);
   moter_right(0, 0);
   moter_AD(0, 0);
   moter_BC(0, 0);
-  moter_spin(1, 0);
+  moter_spin(0, 0);
+  analogWrite(pwm_a, 0);
+  analogWrite(pwm_b, 0);
+  analogWrite(pwm_c, 0);
+  analogWrite(pwm_d, 0);
+}
+
+
+
+void wheel_check()//足回りがちゃんと動くかの確認用
+{
+  int time = millis();
+  if(10000  < time && 11000 > time){
+    moter_front(1, 1);
+  }else if(14000  < time && 15000 > time){
+    moter_right(1, 1);
+  }else if(18000  < time && 19000 > time){
+    moter_front(1, 0);
+  }else if(22000  < time && 23000 > time){
+    moter_right(1, 0);
+  }else if(26000  < time && 27000 > time){
+    moter_AD(1, 1);
+  }else if(30000  < time && 31000 > time){
+    moter_AD(1, 0);
+  }else if(34000  < time && 35000 > time){
+    moter_BC(1, 1);
+  }else if(38000  < time && 39000 > time){
+    moter_BC(1, 0);
+  }else if(42000  < time && 43000 > time){
+    moter_spin(1, 1);
+  }else if(46000  < time && 47000 > time){
+    moter_spin(1, 0);
+  }else{
+    moter_initialization();
+  }
+}
+
+void loop() {
+  wheel_check();
 }

@@ -4,8 +4,8 @@ void setup() {
   pinMode(31, OUTPUT);
 }
 
-void moter_direction(int front){
-  digitalWrite(31, front);
+void moter_direction(){
+  digitalWrite(31, HIGH);
 }
 
 void moter_pwm(){
@@ -19,7 +19,7 @@ void moter_pwm(){
 
 void loop() {
   // put your main code here, to run repeatedly:
-  moter_direction(1);
+  moter_direction();
   moter_pwm();
 }
 //あほ //
