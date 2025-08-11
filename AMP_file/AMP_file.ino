@@ -398,6 +398,11 @@ void controller_spin(){
 }
 
 
+int wheel_speed_lx(){
+  
+}
+
+
 void loop() {
   if(Serial1.available()){
     //接続確認用（このif文は消さないで）
