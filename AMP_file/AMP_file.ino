@@ -1,3 +1,5 @@
+
+
 //abcdのpwmとdirectonの数の決定
 const int pwm_a = 2;       
 const int direction_a = 30;
@@ -325,7 +327,7 @@ void parseCtlState(){
 }
 
 void controller_move(){
-  if((lx_state == 0 && ly_state == 0) || (lx_state != getAxiState("LX") || ly_state != getAxiState("LY")) && rx_state == 0)
+  if((lx_state == 0 && ly_state == 0 && rx_state == 0) || (lx_state != getAxiState("LX") || ly_state != getAxiState("LY")))
   {
     moter_initialization();
   }
@@ -380,7 +382,7 @@ void controller_move(){
 }
 
 void controller_spin(){
-  if(rx_state == 0 && lx_state != 0 && ly_state != 0)
+  if((rx_state == 0 && lx_state == 0 && ly_state == 0) || rx_state != rx_state = getAxiState("RX"))
   {
     moter_initialization();
   }
@@ -394,6 +396,7 @@ void controller_spin(){
     moter_spin(HIGH, LOW);
   }
 }
+
 
 void loop() {
   if(Serial1.available()){
