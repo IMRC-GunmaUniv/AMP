@@ -1,5 +1,3 @@
-
-
 //abcdのpwmとdirectonの数の決定
 const int pwm_a = 2;       
 const int direction_a = 30;
@@ -9,6 +7,11 @@ const int pwm_c = 3;
 const int direction_c = 31;
 const int pwm_d = 6;
 const int direction_d = 34;
+
+//モーターのスピードを定義
+const int First_straight_speed = 20;
+const int First_Diagonal_speed = 33;
+const int First_spin_speed = 20;
 
 //それぞれのボタンの定義
 const String wiredControllerMap[] = {
@@ -372,39 +375,41 @@ void controller_spin(){
 
 int wheel_speed_left(){
   if(lx_state == 0){
-    if(abs(ly_state) == 4)
+    int left_absolute_value = abs(ly_state);
+    if(left_absolute_value == 4)
     {
-      return 80;
+      return First_straight_speed * 4;
     }
-    if(abs(ly_state) == 3)
+    if(left_absolute_value == 3)
     {
-      return 60;
+      return First_straight_speed * 3;
     }
-    if(abs(ly_state) == 2)
+    if(left_absolute_value == 2)
     {
-      return 40;
+      return First_straight_speed * 2;
     }
-    if(abs(ly_state) == 1)
+    if(left_absolute_value == 1)
     {
-      return 20;
+      return First_straight_speed;
     }
   }
   if(ly_state == 0){
-    if(abs(lx_state) == 4)
+    int left_absolute_value = abs(lx_state);
+    if(left_absolute_value == 4)
     {
-      return 80;
+      return First_straight_speed * 4;
     }
-    if(abs(lx_state) == 3)
+    if(left_absolute_value == 3)
     {
-      return 60;
+      return First_straight_speed * 3;
     }
-    if(abs(lx_state) == 2)
+    if(left_absolute_value == 2)
     {
-      return 40;
+      return First_straight_speed * 2;
     }
-    if(abs(lx_state) == 1)
+    if(left_absolute_value == 1)
     {
-      return 20;
+      return First_straight_speed;
     }
   }
   if(lx_state != 0 && ly_state != 0)
@@ -412,15 +417,15 @@ int wheel_speed_left(){
     int xy_coordinate = lx_state * lx_state + ly_state * ly_state;
     if(xy_coordinate <= 25 && xy_coordinate > 13)
     {
-      return 99;
+      return First_Diagonal_speed * 3;
     }
     if(xy_coordinate <= 13 && xy_coordinate > 5)
     {
-      return 66;
+      return First_Diagonal_speed * 2;
     }
     if(xy_coordinate <= 5)
     {
-      return 33;
+      return First_Diagonal_speed;
     }
   }
 }
@@ -429,19 +434,19 @@ int wheel_speed_left(){
 int wheel_speed_right(){
   if(abs(rx_state) == 4)
   {
-    return 80;
+    return First_spin_speed * 4;
   }
   if(abs(rx_state) == 3)
   {
-    return 60;
+    return First_spin_speed * 3;
   }
   if(abs(rx_state) == 2)
   {
-    return 40;
+    return First_spin_speed * 2;
   }
   if(abs(rx_state) == 1)
   {
-    return 20;
+    return First_spin_speed;
   }
 }
 
