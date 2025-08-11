@@ -70,15 +70,15 @@ void moter_direction_D(int front){
 }
 
 
-void moter_front(int on_off, int front){
+void moter_front(int on_off, int front, int moter_power){
   //前か後ろに移動
 
   if(on_off == 1)
   {
-    analogWrite(pwm_a, 66);
-    analogWrite(pwm_b, 66);
-    analogWrite(pwm_c, 66);
-    analogWrite(pwm_d, 66);
+    analogWrite(pwm_a, moter_power);
+    analogWrite(pwm_b, moter_power);
+    analogWrite(pwm_c, moter_power);
+    analogWrite(pwm_d, moter_power);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -95,15 +95,15 @@ void moter_front(int on_off, int front){
 }
 
 
-void moter_right(int on_off, int front){
+void moter_right(int on_off, int front, int moter_power){
   //右か左に移動
 
   if(on_off == 1)
   {
-    analogWrite(pwm_a, 66);
-    analogWrite(pwm_b, 66);
-    analogWrite(pwm_c, 66);
-    analogWrite(pwm_d, 66);
+    analogWrite(pwm_a, moter_power);
+    analogWrite(pwm_b, moter_power);
+    analogWrite(pwm_c, moter_power);
+    analogWrite(pwm_d, moter_power);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -120,14 +120,14 @@ void moter_right(int on_off, int front){
 }
 
 
-void moter_AD(int on_off,int front)//傾き正の向きに移動する関数//
+void moter_AD(int on_off,int front, int moter_power)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
   {
-    analogWrite(pwm_a, 66);
+    analogWrite(pwm_a, moter_power);
     analogWrite(pwm_b,0);
     analogWrite(pwm_c,0);
-    analogWrite(pwm_d, 66);
+    analogWrite(pwm_d, moter_power);
     if(front == 1)//モーターの回転の向き//
     {
       moter_direction_A(HIGH);
@@ -142,13 +142,13 @@ void moter_AD(int on_off,int front)//傾き正の向きに移動する関数//
 }
 
 
-void moter_BC(int on_off,int front)//傾き負の向きに移動する関数//
+void moter_BC(int on_off,int front, int moter_power)//傾き負の向きに移動する関数//
 {
   if(on_off == 1)
   {
     analogWrite(pwm_a,0);
-    analogWrite(pwm_b, 66);
-    analogWrite(pwm_c, 66);
+    analogWrite(pwm_b, moter_power);
+    analogWrite(pwm_c, moter_power);
     analogWrite(pwm_d,0);
     if(front == 1)
     {
@@ -164,14 +164,14 @@ void moter_BC(int on_off,int front)//傾き負の向きに移動する関数//
 }
 
 
-void moter_spin(int on_off, int left)//回転する関数//
+void moter_spin(int on_off, int left, int moter_power)//回転する関数//
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a, 66);
-    analogWrite(pwm_b, 66);
-    analogWrite(pwm_c, 66);
-    analogWrite(pwm_d, 66);
+    analogWrite(pwm_a, moter_power);
+    analogWrite(pwm_b, moter_power);
+    analogWrite(pwm_c, moter_power);
+    analogWrite(pwm_d, moter_power);
     if (left == 1)
     {
       moter_direction_A(HIGH);
