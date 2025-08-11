@@ -191,45 +191,17 @@ void moter_spin(int on_off, int left, int moter_power)//回転する関数//
 
 void moter_initialization(){ 
   //モータの動きを初期化
-  moter_front(0, 0);
-  moter_right(0, 0);
-  moter_AD(0, 0);
-  moter_BC(0, 0);
-  moter_spin(0, 0);
+  moter_front(0, 0, 0);
+  moter_right(0, 0, 0);
+  moter_AD(0, 0, 0);
+  moter_BC(0, 0, 0);
+  moter_spin(0, 0, 0);
   analogWrite(pwm_a, 0);
   analogWrite(pwm_b, 0);
   analogWrite(pwm_c, 0);
   analogWrite(pwm_d, 0);
 }
 
-
-void wheel_check(){
-  //足回りがちゃんと動くかの確認用
-  int time = millis();
-  if(10000  < time && 11000 > time){
-    moter_front(1, 1);
-  }else if(14000  < time && 15000 > time){
-    moter_right(1, 1);
-  }else if(18000  < time && 19000 > time){
-    moter_front(1, 0);
-  }else if(22000  < time && 23000 > time){
-    moter_right(1, 0);
-  }else if(26000  < time && 27000 > time){
-    moter_AD(1, 1);
-  }else if(30000  < time && 31000 > time){
-    moter_AD(1, 0);
-  }else if(34000  < time && 35000 > time){
-    moter_BC(1, 1);
-  }else if(38000  < time && 39000 > time){
-    moter_BC(1, 0);
-  }else if(42000  < time && 43000 > time){
-    moter_spin(1, 1);
-  }else if(46000  < time && 47000 > time){
-    moter_spin(1, 0);
-  }else{
-    moter_initialization();
-  }
-}
 
 //無線
 int getBtnState(String key){
@@ -340,11 +312,11 @@ void controller_move(){
     //縦移動
     if(ly_state < 0)
     {
-      moter_front(HIGH, HIGH);
+      moter_front(HIGH, HIGH, wheel_speed_left());
     }
     if(ly_state > 0)
     {
-      moter_front(HIGH, LOW);
+      moter_front(HIGH, LOW, wheel_speed_left());
     }
   }
   if(ly_state == 0)
@@ -352,11 +324,11 @@ void controller_move(){
     //横移動
     if(lx_state > 0)
     {
-      moter_right(HIGH, HIGH);
+      moter_right(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state < 0)
     {
-      moter_right(HIGH, LOW);
+      moter_right(HIGH, LOW, wheel_speed_left());
     }
   }
   //斜め
@@ -364,44 +336,114 @@ void controller_move(){
   {
     if(lx_state > 0 && ly_state < 0)
     {
-      moter_AD(HIGH, HIGH);
+      moter_AD(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state > 0)
     {
-      moter_AD(HIGH, LOW);
+      moter_AD(HIGH, LOW, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state < 0)
     {
-      moter_BC(HIGH, HIGH);
+      moter_BC(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state > 0 && ly_state > 0)
     {
-      moter_BC(HIGH, LOW);
+      moter_BC(HIGH, LOW, wheel_speed_left());
     }
   }
 }
 
 void controller_spin(){
-  if((rx_state == 0 && lx_state == 0 && ly_state == 0) || rx_state != rx_state = getAxiState("RX"))
+  if((rx_state == 0 && lx_state == 0 && ly_state == 0) || rx_state != getAxiState("RX"))
   {
     moter_initialization();
   }
   rx_state = getAxiState("RX");
   if(rx_state > 0)
   {
-    moter_spin(HIGH, HIGH);
+    moter_spin(HIGH, HIGH, wheel_speed_right());
   }
   if(rx_state < 0)
   {
-    moter_spin(HIGH, LOW);
+    moter_spin(HIGH, LOW, wheel_speed_right());
   }
 }
 
 
-int wheel_speed_lx(){
-  
+int wheel_speed_left(){
+  if(lx_state == 0){
+    if(abs(ly_state) == 4)
+    {
+      return 80;
+    }
+    if(abs(ly_state) == 3)
+    {
+      return 60;
+    }
+    if(abs(ly_state) == 2)
+    {
+      return 40;
+    }
+    if(abs(ly_state) == 1)
+    {
+      return 20;
+    }
+  }
+  if(ly_state == 0){
+    if(abs(lx_state) == 4)
+    {
+      return 80;
+    }
+    if(abs(lx_state) == 3)
+    {
+      return 60;
+    }
+    if(abs(lx_state) == 2)
+    {
+      return 40;
+    }
+    if(abs(lx_state) == 1)
+    {
+      return 20;
+    }
+  }
+  if(lx_state != 0 && ly_state != 0)
+  {
+    int xy_coordinate = lx_state * lx_state + ly_state * ly_state;
+    if(xy_coordinate <= 25 && xy_coordinate > 13)
+    {
+      return 99;
+    }
+    if(xy_coordinate <= 13 && xy_coordinate > 5)
+    {
+      return 66;
+    }
+    if(xy_coordinate <= 5)
+    {
+      return 33;
+    }
+  }
 }
 
+
+int wheel_speed_right(){
+  if(abs(rx_state) == 4)
+  {
+    return 80;
+  }
+  if(abs(rx_state) == 3)
+  {
+    return 60;
+  }
+  if(abs(rx_state) == 2)
+  {
+    return 40;
+  }
+  if(abs(rx_state) == 1)
+  {
+    return 20;
+  }
+}
 
 void loop() {
   if(Serial1.available()){
