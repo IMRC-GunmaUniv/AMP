@@ -1,5 +1,6 @@
+//ピン
 //abcdのpwmとdirectonの数の決定
-const int pwm_a = 2;       
+const int pwm_a = 2;
 const int direction_a = 30;
 const int pwm_b = 5;
 const int direction_b = 33;
@@ -7,11 +8,21 @@ const int pwm_c = 3;
 const int direction_c = 31;
 const int pwm_d = 6;
 const int direction_d = 34;
+//エンコーダ
+const int encoder_a1 = 41;
+const int encoder_a2 = 42;
+const int encoder_b1 = 46;
+const int encoder_b2 = 47;
+const int encoder_c1 = 39;
+const int encoder_c2 = 40;
+const int encoder_d1 = 44;
+const int encoder_d2 = 45;
 
-//モーターのスピードを定義
-const int First_straight_speed = 20;
-const int First_Diagonal_speed = 33;
-const int First_spin_speed = 20;
+
+//モーターの速度の目標値（スティックが完全に倒されている時）
+int max_straight_speed = 200;
+int max_diagonal_speed = 200;
+int max_spin_speed = 200;
 
 //それぞれのボタンの定義
 const String wiredControllerMap[] = {
@@ -38,6 +49,27 @@ int lx_state = 0;
 int ly_state = 0;
 int rx_state = 0;
 
+
+//PID
+int moter_move_check = 0;
+int master_encoder = 0;
+float Proportional_constant = 0.5;
+int old_timer = 0; 
+int cycle_constant = 1000; 
+int old_control_cycle_a = 0;
+int old_control_cycle_b = 0;
+int old_control_cycle_c = 0;
+int old_control_cycle_d = 0;
+//それぞれのモーターが回転した数の総和
+int old_position_a  = digitalRead(encoder_a1);
+int old_position_b  = digitalRead(encoder_b1);
+int old_position_c  = digitalRead(encoder_c1);
+int old_position_d  = digitalRead(encoder_d1);
+//                       a  b  c  d
+int moter_enc_list[4] = {0, 0, 0, 0};
+int moter_power_list[4] = {0, 0, 0, 0};
+
+
 void setup() {
   //pinModeでそれぞれのモーターを定義//
   pinMode(pwm_a, OUTPUT);
@@ -52,6 +84,31 @@ void setup() {
   //無線通信
   Serial1.begin(115200); // ESP用
   Serial.begin(115200); // PC
+
+  //PID
+  //moter_a
+  pinMode(encoder_a1, INPUT);
+  pinMode(encoder_a2, INPUT);
+  //割り込み関数の定義
+  attachInterrupt(digitalPinToInterrupt(encoder_a1), encoder_a, CHANGE);
+  //moter_b
+  pinMode(encoder_b1, INPUT);
+  pinMode(encoder_b2, INPUT);
+  //割り込み関数の定義
+  attachInterrupt(digitalPinToInterrupt(encoder_b1), encoder_b, CHANGE);
+  //moter_c
+  pinMode(encoder_c1, INPUT);
+  pinMode(encoder_c2, INPUT);
+  //割り込み関数の定義
+  attachInterrupt(digitalPinToInterrupt(encoder_c1), encoder_c, CHANGE);
+  //moter_d
+  pinMode(encoder_d1, INPUT);
+  pinMode(encoder_d2, INPUT);
+  //割り込み関数の定義
+  attachInterrupt(digitalPinToInterrupt(encoder_d1), encoder_d, CHANGE);
+
+  Serial.println();
+  Serial.println("start");
 }
 
 //モーター
@@ -73,15 +130,15 @@ void moter_direction_D(int front){
 }
 
 
-void moter_front(int on_off, int front, int moter_power){
+void moter_front(int on_off, int front, int master_moter_power){
   //前か後ろに移動
-
   if(on_off == 1)
   {
-    analogWrite(pwm_a, moter_power);
-    analogWrite(pwm_b, moter_power);
-    analogWrite(pwm_c, moter_power);
-    analogWrite(pwm_d, moter_power);
+    moter_proportional("b", master_moter_power);
+    analogWrite(pwm_a, moter_power_list[0]);
+    analogWrite(pwm_b, moter_power_list[1]);
+    analogWrite(pwm_c, moter_power_list[2]);
+    analogWrite(pwm_d, moter_power_list[3]);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -98,15 +155,16 @@ void moter_front(int on_off, int front, int moter_power){
 }
 
 
-void moter_right(int on_off, int front, int moter_power){
+void moter_right(int on_off, int front, int master_moter_power){
   //右か左に移動
 
   if(on_off == 1)
   {
-    analogWrite(pwm_a, moter_power);
-    analogWrite(pwm_b, moter_power);
-    analogWrite(pwm_c, moter_power);
-    analogWrite(pwm_d, moter_power);
+    moter_proportional("b", master_moter_power);
+    analogWrite(pwm_a, moter_power_list[0]);
+    analogWrite(pwm_b, moter_power_list[1]);
+    analogWrite(pwm_c, moter_power_list[2]);
+    analogWrite(pwm_d, moter_power_list[3]);
     if (front == 1)
     {
       moter_direction_A(HIGH);
@@ -123,14 +181,15 @@ void moter_right(int on_off, int front, int moter_power){
 }
 
 
-void moter_AD(int on_off,int front, int moter_power)//傾き正の向きに移動する関数//
+void moter_AD(int on_off,int front, int master_moter_power)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
-  {
-    analogWrite(pwm_a, moter_power);
-    analogWrite(pwm_b,0);
-    analogWrite(pwm_c,0);
-    analogWrite(pwm_d, moter_power);
+  { 
+    moter_proportional("d", master_moter_power);
+    analogWrite(pwm_a, moter_power_list[0]);
+    analogWrite(pwm_b, 0);
+    analogWrite(pwm_c, 0);
+    analogWrite(pwm_d, moter_power_list[3]);
     if(front == 1)//モーターの回転の向き//
     {
       moter_direction_A(HIGH);
@@ -145,14 +204,15 @@ void moter_AD(int on_off,int front, int moter_power)//傾き正の向きに移�
 }
 
 
-void moter_BC(int on_off,int front, int moter_power)//傾き負の向きに移動する関数//
+void moter_BC(int on_off,int front, int master_moter_power)//傾き負の向きに移動する関数//
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a,0);
-    analogWrite(pwm_b, moter_power);
-    analogWrite(pwm_c, moter_power);
-    analogWrite(pwm_d,0);
+    moter_proportional("b", master_moter_power);
+    analogWrite(pwm_a, 0);
+    analogWrite(pwm_b, moter_power_list[1]);
+    analogWrite(pwm_c, moter_power_list[2]);
+    analogWrite(pwm_d, 0);
     if(front == 1)
     {
       moter_direction_B(LOW);
@@ -167,14 +227,15 @@ void moter_BC(int on_off,int front, int moter_power)//傾き負の向きに移�
 }
 
 
-void moter_spin(int on_off, int left, int moter_power)//回転する関数//
+void moter_spin(int on_off, int left, int master_moter_power)//回転する関数//
 {
   if(on_off == 1)
   {
-    analogWrite(pwm_a, moter_power);
-    analogWrite(pwm_b, moter_power);
-    analogWrite(pwm_c, moter_power);
-    analogWrite(pwm_d, moter_power);
+    moter_proportional("b", master_moter_power);
+    analogWrite(pwm_a, moter_power_list[0]);
+    analogWrite(pwm_b, moter_power_list[1]);
+    analogWrite(pwm_c, moter_power_list[2]);
+    analogWrite(pwm_d, moter_power_list[3]);
     if (left == 1)
     {
       moter_direction_A(HIGH);
@@ -203,10 +264,16 @@ void moter_initialization(){
   analogWrite(pwm_b, 0);
   analogWrite(pwm_c, 0);
   analogWrite(pwm_d, 0);
+  moter_proportional("nothing", 0);
+  for(int i = 0; i < 4; i++)
+    {
+      moter_enc_list[i] = 0;
+    }
 }
 
 
 //無線
+//指定したボタンが入力されているかの確認
 int getBtnState(String key){
   // getBtnState("A")で、〇ボタンのon/offが返ってくる
   // 押されてれば1、押されてなければ0
@@ -224,6 +291,7 @@ int getBtnState(String key){
 }
 
 
+//指定した方向にスティックが倒されているかの確認
 int getAxiState(String key, bool isBin = false){
   // getAxiState("LY")で、スティックの軸の正規化された値が返ってくる
   // Xは右が+、Yは下が+
@@ -253,6 +321,7 @@ int getAxiState(String key, bool isBin = false){
 }
 
 
+//無線通信するために必要なもの
 void parseCtlState(){
   // ESP32からの通信を解析し、コントローラーの配列を設定
 
@@ -301,6 +370,7 @@ void parseCtlState(){
   }
 }
 
+//コントローラーで左スティックが倒されたときに機体が動くようにする
 void controller_move(){
   if((lx_state == 0 && ly_state == 0 && rx_state == 0) || (lx_state != getAxiState("LX") || ly_state != getAxiState("LY")))
   {
@@ -315,10 +385,12 @@ void controller_move(){
     //縦移動
     if(ly_state < 0)
     {
+      //下
       moter_front(HIGH, HIGH, wheel_speed_left());
     }
     if(ly_state > 0)
     {
+      //上
       moter_front(HIGH, LOW, wheel_speed_left());
     }
   }
@@ -327,10 +399,12 @@ void controller_move(){
     //横移動
     if(lx_state > 0)
     {
+      //右
       moter_right(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state < 0)
     {
+      //左
       moter_right(HIGH, LOW, wheel_speed_left());
     }
   }
@@ -339,23 +413,28 @@ void controller_move(){
   {
     if(lx_state > 0 && ly_state < 0)
     {
+      //右斜め前
       moter_AD(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state > 0)
     {
+      //左斜め下
       moter_AD(HIGH, LOW, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state < 0)
     {
+      //左斜め前
       moter_BC(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state > 0 && ly_state > 0)
     {
+      //右斜め下
       moter_BC(HIGH, LOW, wheel_speed_left());
     }
   }
 }
 
+//コントローラーで右スティックが倒されたときに機体が回転するようにする
 void controller_spin(){
   if((rx_state == 0 && lx_state == 0 && ly_state == 0) || rx_state != getAxiState("RX"))
   {
@@ -373,43 +452,44 @@ void controller_spin(){
 }
 
 
+//左スティックの倒す度合いによって機体の速度が増減する
 int wheel_speed_left(){
   if(lx_state == 0){
     int left_absolute_value = abs(ly_state);
     if(left_absolute_value == 4)
     {
-      return First_straight_speed * 4;
+      return max_straight_speed;
     }
     if(left_absolute_value == 3)
     {
-      return First_straight_speed * 3;
+      return max_straight_speed / 2;
     }
     if(left_absolute_value == 2)
     {
-      return First_straight_speed * 2;
+      return max_straight_speed / 3;
     }
     if(left_absolute_value == 1)
     {
-      return First_straight_speed;
+      return max_straight_speed / 4;
     }
   }
   if(ly_state == 0){
     int left_absolute_value = abs(lx_state);
     if(left_absolute_value == 4)
     {
-      return First_straight_speed * 4;
+      return max_straight_speed;
     }
     if(left_absolute_value == 3)
     {
-      return First_straight_speed * 3;
+      return max_straight_speed / 2;
     }
     if(left_absolute_value == 2)
     {
-      return First_straight_speed * 2;
+      return max_straight_speed / 3;
     }
     if(left_absolute_value == 1)
     {
-      return First_straight_speed;
+      return max_straight_speed / 4;
     }
   }
   if(lx_state != 0 && ly_state != 0)
@@ -417,38 +497,136 @@ int wheel_speed_left(){
     int xy_coordinate = lx_state * lx_state + ly_state * ly_state;
     if(xy_coordinate <= 25 && xy_coordinate > 13)
     {
-      return First_Diagonal_speed * 3;
+      return max_diagonal_speed;
     }
     if(xy_coordinate <= 13 && xy_coordinate > 5)
     {
-      return First_Diagonal_speed * 2;
+      return max_diagonal_speed / 2;
     }
     if(xy_coordinate <= 5)
     {
-      return First_Diagonal_speed;
+      return max_diagonal_speed / 3;
     }
   }
 }
 
 
+//右スティックの倒す度合いによって機体の回転速度が増減する
 int wheel_speed_right(){
   if(abs(rx_state) == 4)
   {
-    return First_spin_speed * 4;
+    return max_spin_speed;
   }
   if(abs(rx_state) == 3)
   {
-    return First_spin_speed * 3;
+    return max_spin_speed / 2;
   }
   if(abs(rx_state) == 2)
   {
-    return First_spin_speed * 2;
+    return max_spin_speed / 3;
   }
   if(abs(rx_state) == 1)
   {
-    return First_spin_speed;
+    return max_spin_speed/ 4;
   }
 }
+
+
+void encoder_a(){
+  int new_position_a = digitalRead(encoder_a1);
+  if(new_position_a != old_position_a)
+  {
+    if (digitalRead(encoder_a2) != new_position_a) {
+      moter_enc_list[0]--;
+    } else {
+      moter_enc_list[0]++;
+    }
+    moter_move_check = 1;
+    old_position_a = new_position_a;
+  }
+}
+
+void encoder_b(){
+  int new_position_b = digitalRead(encoder_b1);
+  if(new_position_b != old_position_b)
+  {
+    if (digitalRead(encoder_b2) != new_position_b) {
+      moter_enc_list[1]--;
+    } else {
+      moter_enc_list[1]++;
+    }
+    moter_move_check = 1;
+    old_position_b = new_position_b;
+  }
+}
+
+void encoder_c(){
+  int new_position_c = digitalRead(encoder_c1);
+  if(new_position_c != old_position_c)
+  {
+    if (digitalRead(encoder_c2) != new_position_c) {
+      moter_enc_list[2]++;
+    } else {
+      moter_enc_list[2]--;
+    }
+    moter_move_check = 1;
+    old_position_c = new_position_c;
+  }
+}
+
+void encoder_d(){
+  int new_position_d = digitalRead(encoder_d1);
+  if(new_position_d != old_position_d)
+  {
+    if (digitalRead(encoder_d2) != new_position_d) {
+      moter_enc_list[3]++;
+    } else {
+      moter_enc_list[3]--;
+    }
+    moter_move_check = 1;
+    old_position_d = new_position_d;
+  }
+}
+
+
+void moter_pid(){
+  encoder_a();
+  encoder_b();
+  encoder_c();
+  encoder_d();
+}
+
+
+void moter_proportional(String master_moter_name, int master_speed){
+  moter_pid();
+  if(master_moter_name == "b" || master_moter_name == "d")
+  {
+    if(master_moter_name == "b"){
+      master_encoder = abs(moter_enc_list[1]);
+    }else if(master_moter_name == "d"){
+      master_encoder = abs(moter_enc_list[3]);
+    }
+    for(int i = 0; i < 4; i++)
+    {
+        int moter_deviation = master_speed + Proportional_constant * (master_encoder - abs(moter_enc_list[i]));
+        if(moter_deviation > 255)
+        {
+          moter_power_list[i] = 255;
+        }else if(moter_deviation < 0){
+          moter_power_list[i] = 0;
+        }else{
+          moter_power_list[i] = moter_deviation;
+        }
+    }
+  }else{
+    for(int i = 0; i < 4; i++)
+    {
+      moter_power_list[i] = master_speed;
+    }
+  }
+}
+
+
 
 void loop() {
   if(Serial1.available()){
@@ -457,4 +635,12 @@ void loop() {
   }
   controller_move();
   controller_spin();
+    if(moter_move_check == 1)
+  {
+    Serial.print("A:"); Serial.print(moter_power_list[0]);
+    Serial.print(" B:"); Serial.print(moter_power_list[1]);
+    Serial.print(" C:"); Serial.print(moter_power_list[2]);
+    Serial.print(" D:"); Serial.println(moter_power_list[3]);
+    moter_move_check = 0;
+  }
 }

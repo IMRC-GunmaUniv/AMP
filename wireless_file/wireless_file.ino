@@ -129,7 +129,5 @@ void loop() {
     //接続確認用（このif文は消さないで）
     parseCtlState();
   }
-  Serial.println(getAxiState("LX"));
-  Serial.println(getAxiState("LY"));
-
+  Serial.println(getBtnState("A"));
 }
