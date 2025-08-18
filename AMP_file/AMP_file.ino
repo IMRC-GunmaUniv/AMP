@@ -569,8 +569,10 @@ void encoder_d() {
 int moter_pid_base(String master_moter_name, int master_speed) {
   if (master_moter_name == "a" || master_moter_name == "b") {
 
+    //1秒に一回制御を行う
     if (millis() - pid_timer_base > 1000) {
 
+      //スティックの倒され具合によって目標値を設定
       if (master_speed == 200) {
         Target_RPM_moter = 1200;
       } else if (master_speed == 100) {
@@ -583,6 +585,7 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);
       //Serial.println(moter_proportional_base(master_moter_name));
+      //異常な値を与えないようにする
       if (moter_base_speed > 255) {
         moter_base_speed = 255;
       } else if (moter_base_speed < 0) {
@@ -591,11 +594,15 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 
       Serial.print("  speed: ");
       Serial.println(moter_base_speed);
+
+      //タイマーの初期化
       pid_timer_base = millis();
 
       return moter_base_speed;
 
     } else {
+
+      //制御を行ってから1秒に満たない場合、前回の数値を出力
       return moter_base_speed;
     }
 
@@ -608,9 +615,12 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 //P制御
 int moter_proportional_base(String master_moter_name) {
   if (master_moter_name == "a") {
+    //1秒間あたりのモーターの回転数
     int one_second_encoder = moter_enc_list[0] - pre_encoder_a;
+    //現在の値を1秒後に使えるようにする
     pre_encoder_a = moter_enc_list[0];
     Serial.print(one_second_encoder);
+    //目標値の誤差÷6　6はdigitalWriteに与える第二引数1あたりのモーターの回転量
     return (Target_RPM_moter - one_second_encoder) / 6;
   } else {
     int one_second_encoder = moter_enc_list[1] - pre_encoder_b;
