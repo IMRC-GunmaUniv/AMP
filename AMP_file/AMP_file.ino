@@ -1,13 +1,13 @@
 //ピン
 //abcdのpwmとdirectonの数の決定
-const int pwm_a = 2;
-const int direction_a = 30;
-const int pwm_b = 5;
-const int direction_b = 33;
-const int pwm_c = 3;
-const int direction_c = 31;
-const int pwm_d = 6;
-const int direction_d = 34;
+const int pwm_a = 3;
+const int direction_a = 31;
+const int pwm_b = 2;
+const int direction_b = 30;
+const int pwm_c = 6;
+const int direction_c = 34;
+const int pwm_d = 5;
+const int direction_d = 33;
 //エンコーダ
 const int encoder_a1 = 41;
 const int encoder_a2 = 42;
@@ -53,21 +53,24 @@ int rx_state = 0;
 //PID
 int moter_move_check = 0;
 int master_encoder = 0;
-float Proportional_constant = 0.5;
-int old_timer = 0; 
-int cycle_constant = 1000; 
-int old_control_cycle_a = 0;
-int old_control_cycle_b = 0;
-int old_control_cycle_c = 0;
-int old_control_cycle_d = 0;
+float Kp_moter = 1;
+float Ki_moter = 0.5;
+float Kd_moter = 0.1;
+int pid_timer = -1000;
 //それぞれのモーターが回転した数の総和
 int old_position_a  = digitalRead(encoder_a1);
 int old_position_b  = digitalRead(encoder_b1);
 int old_position_c  = digitalRead(encoder_c1);
 int old_position_d  = digitalRead(encoder_d1);
-//                       a  b  c  d
+//それぞれのモーターのエンコーダー。左から a  b  c  d
 int moter_enc_list[4] = {0, 0, 0, 0};
+//それぞれのモーターに渡す出力の値。左から a  b  c  d
 int moter_power_list[4] = {0, 0, 0, 0};
+//それぞれのモーターの誤差の合計。左から a  b  c  d
+int moter_error_total[4] = {0, 0, 0, 0};
+
+int error[4] = {0, 0, 0, 0};
+int pre_error[4] = {0, 0, 0, 0};
 
 
 void setup() {
@@ -134,7 +137,7 @@ void moter_front(int on_off, int front, int master_moter_power){
   //前か後ろに移動
   if(on_off == 1)
   {
-    moter_proportional("b", master_moter_power);
+    moter_pid("a", master_moter_power);
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -143,13 +146,13 @@ void moter_front(int on_off, int front, int master_moter_power){
     {
       moter_direction_A(HIGH);
       moter_direction_B(LOW);
-      moter_direction_C(LOW);
-      moter_direction_D(HIGH);
+      moter_direction_C(HIGH);
+      moter_direction_D(LOW);
     }else{
       moter_direction_A(LOW);
       moter_direction_B(HIGH);
-      moter_direction_C(HIGH);
-      moter_direction_D(LOW);
+      moter_direction_C(LOW);
+      moter_direction_D(HIGH);
     }
   }  
 }
@@ -160,68 +163,68 @@ void moter_right(int on_off, int front, int master_moter_power){
 
   if(on_off == 1)
   {
-    moter_proportional("b", master_moter_power);
+    moter_pid("a", master_moter_power);
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
     analogWrite(pwm_d, moter_power_list[3]);
     if (front == 1)
     {
-      moter_direction_A(HIGH);
-      moter_direction_B(HIGH);
-      moter_direction_C(HIGH);
-      moter_direction_D(HIGH);
-    }else{
       moter_direction_A(LOW);
       moter_direction_B(LOW);
       moter_direction_C(LOW);
       moter_direction_D(LOW);
+    }else{
+      moter_direction_A(HIGH);
+      moter_direction_B(HIGH);
+      moter_direction_C(HIGH);
+      moter_direction_D(HIGH);
     }
   }
 }
 
 
-void moter_AD(int on_off,int front, int master_moter_power)//傾き正の向きに移動する関数//
+void moter_BD(int on_off,int front, int master_moter_power)//傾き正の向きに移動する関数//
 {
   if(on_off == 1) //動かすモーターを固定//
   { 
-    moter_proportional("d", master_moter_power);
-    analogWrite(pwm_a, moter_power_list[0]);
-    analogWrite(pwm_b, 0);
+    moter_pid("b", master_moter_power);
+    analogWrite(pwm_a, 0);
+    analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, 0);
     analogWrite(pwm_d, moter_power_list[3]);
     if(front == 1)//モーターの回転の向き//
     {
-      moter_direction_A(HIGH);
-      moter_direction_D(HIGH);
+      moter_direction_B(LOW);
+      moter_direction_D(LOW);
     }
     else
     {
-      moter_direction_A(LOW);
-      moter_direction_D(LOW);
+      moter_direction_B(HIGH);
+      moter_direction_D(HIGH);
     }
   } 
 }
 
 
-void moter_BC(int on_off,int front, int master_moter_power)//傾き負の向きに移動する関数//
+void moter_AC(int on_off,int front, int master_moter_power)//傾き負の向きに移動する関数//
 {
   if(on_off == 1)
   {
-    moter_proportional("b", master_moter_power);
-    analogWrite(pwm_a, 0);
-    analogWrite(pwm_b, moter_power_list[1]);
+    moter_pid("a", master_moter_power);
+    analogWrite(pwm_a, moter_power_list[0]);
+    analogWrite(pwm_b, 0);
     analogWrite(pwm_c, moter_power_list[2]);
     analogWrite(pwm_d, 0);
     if(front == 1)
     {
-      moter_direction_B(LOW);
-      moter_direction_C(LOW);
+      moter_direction_A(HIGH);
+      moter_direction_C(HIGH);
     }
     else
     {
-      moter_direction_B(HIGH);
-      moter_direction_C(HIGH);
+      moter_direction_A(LOW);
+      moter_direction_C(LOW);
     } 
   }
 }
@@ -231,7 +234,7 @@ void moter_spin(int on_off, int left, int master_moter_power)//回転する関�
 {
   if(on_off == 1)
   {
-    moter_proportional("b", master_moter_power);
+    moter_pid("a", master_moter_power);
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -240,15 +243,15 @@ void moter_spin(int on_off, int left, int master_moter_power)//回転する関�
     {
       moter_direction_A(HIGH);
       moter_direction_B(LOW);
-      moter_direction_C(HIGH);
-      moter_direction_D(LOW);
+      moter_direction_C(LOW);
+      moter_direction_D(HIGH);
     }
     else
     {
       moter_direction_A(LOW);
       moter_direction_B(HIGH);
-      moter_direction_C(LOW);
-      moter_direction_D(HIGH);
+      moter_direction_C(HIGH);
+      moter_direction_D(LOW);
     }
   }
 }
@@ -257,18 +260,19 @@ void moter_initialization(){
   //モータの動きを初期化
   moter_front(0, 0, 0);
   moter_right(0, 0, 0);
-  moter_AD(0, 0, 0);
-  moter_BC(0, 0, 0);
+  moter_BD(0, 0, 0);
+  moter_AC(0, 0, 0);
   moter_spin(0, 0, 0);
   analogWrite(pwm_a, 0);
   analogWrite(pwm_b, 0);
   analogWrite(pwm_c, 0);
   analogWrite(pwm_d, 0);
-  moter_proportional("nothing", 0);
+  moter_pid("nothing", 0);
   for(int i = 0; i < 4; i++)
-    {
-      moter_enc_list[i] = 0;
-    }
+  {
+    moter_enc_list[i] = 0;
+  }
+  pid_timer = -1000;
 }
 
 
@@ -414,22 +418,22 @@ void controller_move(){
     if(lx_state > 0 && ly_state < 0)
     {
       //右斜め前
-      moter_AD(HIGH, HIGH, wheel_speed_left());
+      moter_BD(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state > 0)
     {
       //左斜め下
-      moter_AD(HIGH, LOW, wheel_speed_left());
+      moter_BD(HIGH, LOW, wheel_speed_left());
     }
     if(lx_state < 0 && ly_state < 0)
     {
       //左斜め前
-      moter_BC(HIGH, HIGH, wheel_speed_left());
+      moter_AC(HIGH, HIGH, wheel_speed_left());
     }
     if(lx_state > 0 && ly_state > 0)
     {
       //右斜め下
-      moter_BC(HIGH, LOW, wheel_speed_left());
+      moter_AC(HIGH, LOW, wheel_speed_left());
     }
   }
 }
@@ -532,10 +536,13 @@ int wheel_speed_right(){
 }
 
 
+//割り込み関数を用いてエンコーダーの値が変更されたとき回転数の総和を導く
+//今後の予定としては、現在回転数の値はモーターの動きが止まる、変更されるたびにゼロに初期化されてしまっている。それだとP制御をする際に不都合になりそう。そのため順転、逆転を区別せずモーターの回転した値を読み込めるようにしたい。バグが出るのを防ぐため実機ができてから変更する。
 void encoder_a(){
   int new_position_a = digitalRead(encoder_a1);
   if(new_position_a != old_position_a)
   {
+    //↓のifを消せばよさそう
     if (digitalRead(encoder_a2) != new_position_a) {
       moter_enc_list[0]--;
     } else {
@@ -589,44 +596,73 @@ void encoder_d(){
 }
 
 
-void moter_pid(){
-  encoder_a();
-  encoder_b();
-  encoder_c();
-  encoder_d();
-}
-
-
-void moter_proportional(String master_moter_name, int master_speed){
-  moter_pid();
-  if(master_moter_name == "b" || master_moter_name == "d")
+void moter_pid(String master_moter_name, int master_speed){
+  if(master_moter_name == "a" || master_moter_name == "b")
   {
-    if(master_moter_name == "b"){
-      master_encoder = abs(moter_enc_list[1]);
-    }else if(master_moter_name == "d"){
-      master_encoder = abs(moter_enc_list[3]);
-    }
-    for(int i = 0; i < 4; i++)
+    moter_proportional(master_moter_name);
+    if(millis() - pid_timer > 1000)
     {
-        int moter_deviation = master_speed + Proportional_constant * (master_encoder - abs(moter_enc_list[i]));
-        if(moter_deviation > 255)
+      //moter_integral();
+      //moter_differential();
+      
+      pid_timer = millis();
+    }
+
+      //↓でdigital.writeがとりうる値を超えないようにしている
+      for(int i = 0; i < 4; i++)
+      {
+        moter_power_list[i] += master_speed;
+        //Serial.println(moter_power_list[i]);
+        if(moter_power_list[i] > 255)
         {
           moter_power_list[i] = 255;
-        }else if(moter_deviation < 0){
+        }else if(moter_power_list[i] < 0){
           moter_power_list[i] = 0;
-        }else{
-          moter_power_list[i] = moter_deviation;
         }
-    }
+      }
+
+
   }else{
+    //P制御を用いない時用。基本は第一引数に"nothing"を代入すること
     for(int i = 0; i < 4; i++)
     {
       moter_power_list[i] = master_speed;
     }
+
   }
 }
 
+void moter_proportional(String master_moter_name){
+  //それぞれのホイールのスピードをP制御を用いたうえで出力。moter_power_listというリストにそれぞれのスピードを代入しています。
+  if(master_moter_name == "a"){
+    master_encoder = abs(moter_enc_list[0]); //目標値の設定（この制御では一つのホイールの値を目標値とし、その他のホイールをその値に合わせる）
+  }else if(master_moter_name == "b"){
+    master_encoder = abs(moter_enc_list[1]);
+  }
+  for(int i = 0; i < 4; i++)
+  {
+    error[i] = master_encoder - abs(moter_enc_list[i]);
+    moter_power_list[i] = Kp_moter * error[i];
+    //Serial.println(moter_power_list[i]);
+    moter_error_total[i] += error[i]; //積分で使うためそれぞれの誤差を配列に格納
+  }
+}
 
+void moter_integral(){
+  for(int i = 0; i < 4; i++)
+  {
+    moter_power_list[i] += Ki_moter * moter_error_total[i]; 
+    //Serial.println(moter_power_list[i]);
+  }
+}
+
+void moter_differential(){
+  for(int i = 0; i < 4; i++)
+  {
+    moter_power_list[i] += Kd_moter * (error[i] - pre_error[i]); 
+    pre_error[i] = error[i];
+  }
+}
 
 void loop() {
   if(Serial1.available()){
@@ -635,7 +671,7 @@ void loop() {
   }
   controller_move();
   controller_spin();
-    if(moter_move_check == 1)
+  if(moter_move_check == 1)
   {
     Serial.print("A:"); Serial.print(moter_power_list[0]);
     Serial.print(" B:"); Serial.print(moter_power_list[1]);
@@ -643,4 +679,5 @@ void loop() {
     Serial.print(" D:"); Serial.println(moter_power_list[3]);
     moter_move_check = 0;
   }
+  
 }
