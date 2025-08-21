@@ -52,7 +52,7 @@ int rx_state = 0;
 
 //PID
 //基準処理（主モーター）
-const float Kp_moter_base = 1;
+const float Kp_moter_base = 0.5;
 const float Ki_moter_base = 0.5;
 const float Kd_moter_base = 0.1;
 const float MAX_INTEGRAL = 10;
@@ -587,16 +587,17 @@ int moter_pid_base(String master_moter_name, int master_speed) {
       }
 
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);
-      //Serial.println(moter_proportional_base(master_moter_name));
+      //SerialUSB.println(moter_proportional_base(master_moter_name));
+      
+      SerialUSB.print("  speed: ");
+      SerialUSB.println(moter_base_speed);
+
       //異常な値を与えないようにする
       if (moter_base_speed > 255) {
-        moter_base_speed = 255;
+        return 255;
       } else if (moter_base_speed < 0) {
-        moter_base_speed = 0;
+        return 0;
       }
-
-      Serial.print("  speed: ");
-      Serial.println(moter_base_speed);
 
       //タイマーの初期化
       pid_timer_base = millis();
@@ -622,13 +623,13 @@ int moter_proportional_base(String master_moter_name) {
     int one_second_encoder = moter_enc_list[0] - pre_encoder_a;
     //現在の値を1秒後に使えるようにする
     pre_encoder_a = moter_enc_list[0];
-    Serial.print(one_second_encoder);
-    //目標値の誤差÷6　6はdigitalWriteに与える第二引数1あたりのモーターの回転量
+    SerialUSB.print(one_second_encoder);
+    //目標値の誤差÷6　6はanalogWriteに与える第二引数1あたりのモーターの回転量
     return (Target_RPM_moter - one_second_encoder) / 6;
   } else {
     int one_second_encoder = moter_enc_list[1] - pre_encoder_b;
     pre_encoder_b = moter_enc_list[1];
-    Serial.print(one_second_encoder);
+    SerialUSB.print(one_second_encoder);
     return (Target_RPM_moter - one_second_encoder) / 6;
   }
 }
@@ -647,10 +648,10 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
       pid_timer_sync = millis();
     }
 
-    //↓でdigital.writeがとりうる値を超えないようにしている
+    //↓でanalog.writeがとりうる値を超えないようにしている
     for (int i = 0; i < 4; i++) {
       moter_power_list[i] += master_speed;
-      //Serial.println(moter_power_list[i]);
+      //SerialUSB.println(moter_power_list[i]);
       if (moter_power_list[i] > 255) {
         moter_power_list[i] = 255;
       } else if (moter_power_list[i] < 0) {
@@ -678,7 +679,7 @@ void moter_proportional_sync(String master_moter_name) {
   for (int i = 0; i < 4; i++) {
     sync_error_list[i] = master_encoder - abs(moter_enc_list[i]);
     moter_power_list[i] = Kp_moter_sync * sync_error_list[i];
-    //Serial.println(moter_power_list[i]);
+    //SerialUSB.println(moter_power_list[i]);
     moter_error_total[i] += sync_error_list[i];  //積分で使うためそれぞれの誤差を配列に格納
   }
 }
@@ -695,7 +696,7 @@ void moter_integral_sync() {
     moter_error_total[i] = constrain(moter_error_total[i], -MAX_INTEGRAL, MAX_INTEGRAL);//誤差の値を制限
 
     moter_power_list[i] += Ki_moter_sync * moter_error_total[i];
-    //Serial.println(moter_power_list[i]);
+    //SerialUSB.println(moter_power_list[i]);
   }
 }
 
@@ -718,15 +719,15 @@ void loop() {
   controller_spin();
 
   /*
-  if (moter_move_check == 1) {
-    Serial.print("A:");
-    Serial.print(moter_enc_list[0]);
-    Serial.print(" B:");
-    Serial.print(moter_enc_list[1]);
-    Serial.print(" C:");
-    Serial.print(moter_enc_list[2]);
-    Serial.print(" D:");
-    Serial.println(moter_enc_list[3]);
+  if (moter_move_check != 0) {
+    SerialUSB.print("A:");
+    SerialUSB.print(moter_power_list[0]);
+    SerialUSB.print(" B:");
+    SerialUSB.print(moter_power_list[1]);
+    SerialUSB.print(" C:");
+    SerialUSB.print(moter_power_list[2]);
+    SerialUSB.print(" D:");
+    SerialUSB.println(moter_power_list[3]);
     moter_move_check = 0;
   }
   */
