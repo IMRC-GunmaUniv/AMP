@@ -55,8 +55,6 @@ int rx_state = 0;
 const float Kp_moter_base = 0.5;
 const float Ki_moter_base = 0.5;
 const float Kd_moter_base = 0.1;
-const float MAX_INTEGRAL = 10;
-const float DeadLine = 0.01;
 //一秒間で回転するモーターの目標値。digitalWriteの引数1あたりの一秒間の回転数は6。digitalWriteの引数が200の時は1200とする。
 //この値はmeasurement_fileを用いて出した値
 int Target_RPM_moter = 0;
@@ -90,9 +88,13 @@ int moter_error_total[4] = { 0, 0, 0, 0 };
 
 int sync_error_list[4] = { 0, 0, 0, 0 };
 int pre_sync_error_list[4] = { 0, 0, 0, 0 };
-
-
-void setup() {
+const float MAX_INTEGRAL = 10;  //I制御における値を調整（範囲）
+const float DeadLine = 0.01;    //I制御における値を調整（誤差の消去）
+const float alpha = 0.8;        // 0.0〜1.0で調整（小さいほど滑らか）
+int smoothed_derivative[4] = { 0, 0, 0, 0 };//D制御のフィルター
+ 
+ 
+ void setup() {
   //pinModeでそれぞれのモーターを定義//
   pinMode(pwm_a, OUTPUT);
   pinMode(direction_a, OUTPUT);
@@ -104,8 +106,8 @@ void setup() {
   pinMode(direction_d, OUTPUT);
 
   //無線通信
-  Serial1.begin(115200);  // ESP用
-  SerialUSB.begin(115200);   // PC
+  Serial1.begin(115200);    // ESP用
+  SerialUSB.begin(115200);  // PC
 
   //PID
   //moter_a
@@ -155,8 +157,7 @@ void moter_direction_D(int front) {
 void moter_front(int on_off, int front, int master_moter_power) {
   //前か後ろに移動
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a"
-    , master_moter_power));
+    moter_pid_sync("a", moter_pid_base("nothing", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -180,7 +181,7 @@ void moter_right(int on_off, int front, int master_moter_power) {
   //右か左に移動
 
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    moter_pid_sync("a", moter_pid_base("nothing", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -204,7 +205,7 @@ void moter_BD(int on_off, int front, int master_moter_power)  //傾き正の向�
 {
   if (on_off == 1)  //動かすモーターを固定//
   {
-    moter_pid_sync("b", moter_pid_base("b", master_moter_power));
+    moter_pid_sync("b", moter_pid_base("nothing", master_moter_power));
     analogWrite(pwm_a, 0);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, 0);
@@ -224,7 +225,7 @@ void moter_BD(int on_off, int front, int master_moter_power)  //傾き正の向�
 void moter_AC(int on_off, int front, int master_moter_power)  //傾き負の向きに移動する関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    moter_pid_sync("a", moter_pid_base("nothing", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, 0);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -243,7 +244,7 @@ void moter_AC(int on_off, int front, int master_moter_power)  //傾き負の向�
 void moter_spin(int on_off, int left, int master_moter_power)  //回転する関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    moter_pid_sync("a", moter_pid_base("nothing", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -588,7 +589,7 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);
       //SerialUSB.println(moter_proportional_base(master_moter_name));
-      
+
       SerialUSB.print("  speed: ");
       SerialUSB.println(moter_base_speed);
 
@@ -642,6 +643,7 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
 
     if (millis() - pid_timer_sync > 1000) {
 
+
       moter_integral_sync();
       //moter_differential_sync();
 
@@ -680,33 +682,35 @@ void moter_proportional_sync(String master_moter_name) {
     sync_error_list[i] = master_encoder - abs(moter_enc_list[i]);
     moter_power_list[i] = Kp_moter_sync * sync_error_list[i];
     //SerialUSB.println(moter_power_list[i]);
-    moter_error_total[i] += sync_error_list[i];  //積分で使うためそれぞれの誤差を配列に格納
   }
 }
 
 //I制御
 void moter_integral_sync() {
   for (int i = 0; i < 4; i++) {
-    if(abs(sync_error_list[i]) < DeadLine){
-      moter_error_total[i] = 0;//誤差が小さいときは積分しない
-    }else {
+    if (abs(sync_error_list[i]) < DeadLine) {
+      SerialUSB.println("continue");
+      continue;  //誤差が小さいときは積分しない
+    } else {
       moter_error_total[i] += sync_error_list[i];  // 誤差を積分
     }
 
-    moter_error_total[i] = constrain(moter_error_total[i], -MAX_INTEGRAL, MAX_INTEGRAL);//誤差の値を制限
+    moter_error_total[i] = constrain(moter_error_total[i], -MAX_INTEGRAL, MAX_INTEGRAL);  //誤差の値を制限
 
     moter_power_list[i] += Ki_moter_sync * moter_error_total[i];
-    //SerialUSB.println(moter_power_list[i]);
+    SerialUSB.println(Ki_moter_sync * moter_error_total[i]);
   }
 }
 
 //D制御
 void moter_differential_sync() {
   for (int i = 0; i < 4; i++) {
-    moter_power_list[i] += Kd_moter_sync * (sync_error_list[i] - pre_sync_error_list[i]);
+    float derivative = sync_error_list[i] - pre_sync_error_list[i];
     pre_sync_error_list[i] = sync_error_list[i];
+    smoothed_derivative[i] = alpha * smoothed_derivative[i] + (1 - alpha) * derivative;
+    moter_power_list[i] += Kd_moter_sync * smoothed_derivative[i];
+    //SerialUSB.println(moter_power_list[i]);
   }
-  
 }
 
 void loop() {
