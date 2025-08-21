@@ -576,6 +576,9 @@ int moter_pid_base(String master_moter_name, int master_speed) {
     //1秒に一回制御を行う
     if (millis() - pid_timer_base > 1000) {
 
+      //タイマーの初期化
+      pid_timer_base = millis();
+
       //スティックの倒され具合によって目標値を設定
       if (master_speed == 200) {
         Target_RPM_moter = 1200;
@@ -593,15 +596,13 @@ int moter_pid_base(String master_moter_name, int master_speed) {
       SerialUSB.print("  speed: ");
       SerialUSB.println(moter_base_speed);
 
+
       //異常な値を与えないようにする
       if (moter_base_speed > 255) {
         return 255;
       } else if (moter_base_speed < 0) {
         return 0;
       }
-
-      //タイマーの初期化
-      pid_timer_base = millis();
 
       return moter_base_speed;
 
