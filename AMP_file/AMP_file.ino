@@ -55,6 +55,8 @@ int rx_state = 0;
 const float Kp_moter_base = 1;
 const float Ki_moter_base = 0.5;
 const float Kd_moter_base = 0.1;
+const float MAX_INTEGRAL = 10;
+const float DeadLine = 0.01;
 //一秒間で回転するモーターの目標値。digitalWriteの引数1あたりの一秒間の回転数は6。digitalWriteの引数が200の時は1200とする。
 //この値はmeasurement_fileを用いて出した値
 int Target_RPM_moter = 0;
@@ -103,7 +105,7 @@ void setup() {
 
   //無線通信
   Serial1.begin(115200);  // ESP用
-  Serial.begin(115200);   // PC
+  SerialUSB.begin(115200);   // PC
 
   //PID
   //moter_a
@@ -127,8 +129,8 @@ void setup() {
   //割り込み関数の定義
   attachInterrupt(digitalPinToInterrupt(encoder_d1), encoder_d, CHANGE);
 
-  Serial.println();
-  Serial.println("start");
+  SerialUSB.println();
+  SerialUSB.println("start");
 }
 
 //モーター
@@ -153,7 +155,8 @@ void moter_direction_D(int front) {
 void moter_front(int on_off, int front, int master_moter_power) {
   //前か後ろに移動
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    moter_pid_sync("a", moter_pid_base("a"
+    , master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -341,7 +344,7 @@ void parseCtlState() {
   // "DATA: "から始まらないものは解析しない
   // "INFO: Controller has disconnected"とかそういうメッセージなので、そのままPC側に送る
   if (!data.startsWith("DATA: ")) {
-    Serial.println(data);
+    SerialUSB.println(data);
     return;
   }
 
@@ -638,7 +641,7 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
 
     if (millis() - pid_timer_sync > 1000) {
 
-      //moter_integral_sync();
+      moter_integral_sync();
       //moter_differential_sync();
 
       pid_timer_sync = millis();
@@ -663,6 +666,7 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
   }
 }
 
+
 //P制御
 void moter_proportional_sync(String master_moter_name) {
   //それぞれのホイールのスピードをP制御を用いたうえで出力。moter_power_listというリストにそれぞれのスピードを代入しています。
@@ -682,6 +686,14 @@ void moter_proportional_sync(String master_moter_name) {
 //I制御
 void moter_integral_sync() {
   for (int i = 0; i < 4; i++) {
+    if(abs(sync_error_list[i]) < DeadLine){
+      moter_error_total[i] = 0;//誤差が小さいときは積分しない
+    }else {
+      moter_error_total[i] += sync_error_list[i];  // 誤差を積分
+    }
+
+    moter_error_total[i] = constrain(moter_error_total[i], -MAX_INTEGRAL, MAX_INTEGRAL);//誤差の値を制限
+
     moter_power_list[i] += Ki_moter_sync * moter_error_total[i];
     //Serial.println(moter_power_list[i]);
   }
@@ -693,6 +705,7 @@ void moter_differential_sync() {
     moter_power_list[i] += Kd_moter_sync * (sync_error_list[i] - pre_sync_error_list[i]);
     pre_sync_error_list[i] = sync_error_list[i];
   }
+  
 }
 
 void loop() {
