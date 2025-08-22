@@ -605,8 +605,12 @@ int moter_pid_base(String master_moter_name, int master_speed) {
         Target_RPM_moter = 300;
       }
 
+<<<<<<< HEAD
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);//ここにKi*moter_i_base + Kd*moter_d_baseが入る
       //SerialUSB.println(moter_proportional_base(master_moter_name));
+=======
+      moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name) + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
+>>>>>>> 6bb555cf2204b2171c1f240369941b35e87ef1ea
 
       SerialUSB.print("  speed: ");
       SerialUSB.println(moter_base_speed);
@@ -651,6 +655,7 @@ int moter_proportional_base(String master_moter_name) {
   }
 }
 
+<<<<<<< HEAD
 //I制御
 /*int moter_integral_base(String master_moter_name) {
     if(master_moter_name.equals("a")) {
@@ -666,6 +671,25 @@ int moter_proportional_base(String master_moter_name) {
 //D制御
 
 
+=======
+int moter_integral_base(String master_moter_name){
+  if (master_moter_name == "a") {
+    return 0;
+  }else{
+    return 0;
+  }
+}
+
+
+int moter_differential_base(String master_moter_name){
+  if (master_moter_name == "a") {
+    return 0;
+  }else{
+    return 0;
+  }
+}
+
+>>>>>>> 6bb555cf2204b2171c1f240369941b35e87ef1ea
 //同期処理（他のモータ）
 void moter_pid_sync(String master_moter_name, int master_speed) {
   if (master_moter_name.equals("a") || master_moter_name.equals("b")) {
@@ -716,6 +740,7 @@ void moter_proportional_sync(String master_moter_name) {
   }
 }
 
+
 //I制御
 void moter_integral_sync() {
   for (int i = 0; i < 4; i++) {
@@ -764,7 +789,11 @@ void loop() {
   controller_move();
   controller_spin();
 
+<<<<<<< HEAD
    /*if (moter_move_check != 0) {
+=======
+  if (moter_move_check != 0) {
+>>>>>>> 6bb555cf2204b2171c1f240369941b35e87ef1ea
     SerialUSB.print("A:");
     SerialUSB.print(moter_enc_list[0]);
     SerialUSB.print(" B:");
@@ -774,5 +803,9 @@ void loop() {
     SerialUSB.print(" D:");
     SerialUSB.println(moter_enc_list[3]);
     moter_move_check = 0;
+<<<<<<< HEAD
   }*/
+=======
+  }
+>>>>>>> 6bb555cf2204b2171c1f240369941b35e87ef1ea
 }
