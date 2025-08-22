@@ -590,8 +590,7 @@ int moter_pid_base(String master_moter_name, int master_speed) {
         Target_RPM_moter = 300;
       }
 
-      moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);
-      //SerialUSB.println(moter_proportional_base(master_moter_name));
+      moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name) + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
 
       SerialUSB.print("  speed: ");
       SerialUSB.println(moter_base_speed);
@@ -633,6 +632,23 @@ int moter_proportional_base(String master_moter_name) {
     pre_encoder_b = moter_enc_list[1];
     SerialUSB.print(one_second_encoder);
     return (Target_RPM_moter - one_second_encoder) / 6;
+  }
+}
+
+int moter_integral_base(String master_moter_name){
+  if (master_moter_name == "a") {
+    return 0;
+  }else{
+    return 0;
+  }
+}
+
+
+int moter_differential_base(String master_moter_name){
+  if (master_moter_name == "a") {
+    return 0;
+  }else{
+    return 0;
   }
 }
 
@@ -686,6 +702,7 @@ void moter_proportional_sync(String master_moter_name) {
   }
 }
 
+
 //I制御
 void moter_integral_sync() {
   for (int i = 0; i < 4; i++) {
@@ -723,17 +740,15 @@ void loop() {
   controller_move();
   controller_spin();
 
-  /*
   if (moter_move_check != 0) {
     SerialUSB.print("A:");
-    SerialUSB.print(moter_power_list[0]);
+    SerialUSB.print(moter_enc_list[0]);
     SerialUSB.print(" B:");
-    SerialUSB.print(moter_power_list[1]);
+    SerialUSB.print(moter_enc_list[1]);
     SerialUSB.print(" C:");
-    SerialUSB.print(moter_power_list[2]);
+    SerialUSB.print(moter_enc_list[2]);
     SerialUSB.print(" D:");
-    SerialUSB.println(moter_power_list[3]);
+    SerialUSB.println(moter_enc_list[3]);
     moter_move_check = 0;
   }
-  */
 }
