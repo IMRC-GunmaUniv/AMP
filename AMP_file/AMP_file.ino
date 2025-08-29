@@ -656,6 +656,7 @@ int moter_proportional_base(String master_moter_name) {
     if(master_moter_name.equals("a")) {
        int one_power = moter_proportional_base() - pre_power_a;
        pre_power_a = moter_proportional_base();
+       
 
     }
    
