@@ -676,6 +676,24 @@ int moter_proportional_base(String master_moter_name) {
 }
 
 //I制御
+<<<<<<< HEAD
+=======
+/*int moter_integral_base(String master_moter_name) {
+    if(master_moter_name.equals("a")) {
+       int one_power = moter_proportional_base() - pre_power_a;
+       pre_power_a = moter_proportional_base();
+       
+
+    }
+   
+
+  }
+}*/
+
+//D制御
+
+
+>>>>>>> 24e8f3723ba2d6f753f12f3d6c3328de2796e2bb
 int moter_integral_base(String master_moter_name) {
   if (master_moter_name.equals("a")) {
     return 0;
