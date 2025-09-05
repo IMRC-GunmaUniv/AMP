@@ -62,8 +62,8 @@ int rx_state = 0;
 const float Kp_moter_base = 0.5;
 const float Ki_moter_base = 0.5;
 const float Kd_moter_base = 0.1;
-//analogWrite1あたりのモーターの回転数
-const int Rotate_Unit = 6;
+//analogWriteの1あたりでモーターが50msに何回転するか
+const float Rotate_Unit = 0.3;
 //一秒間で回転するモーターの目標値。analogWriteの引数1あたりの一秒間の回転数は6。digitalWriteの引数が200の時は1200とする。
 //この値はmeasurement_fileを用いて出した値
 int Target_RPM_moter = 0;
@@ -188,7 +188,7 @@ void moter_direction_D(int front) {
 void moter_front(int on_off, int front, int master_moter_power) {
   //前か後ろに移動
   if (on_off == 1) {
-    moter_pid_sync("a", master_moter_power);
+    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -212,7 +212,7 @@ void moter_right(int on_off, int front, int master_moter_power) {
   //右か左に移動
 
   if (on_off == 1) {
-    moter_pid_sync("a", master_moter_power);
+    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -236,7 +236,7 @@ void moter_BC(int on_off, int front, int master_moter_power)  //斜めに動く�
 {
   if (on_off == 1)  //動かすモーターを固定//
   {
-    moter_pid_sync("b", master_moter_power);
+    moter_pid_sync("b", moter_pid_base("b", master_moter_power));
     analogWrite(pwm_a, 0);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -256,7 +256,7 @@ void moter_BC(int on_off, int front, int master_moter_power)  //斜めに動く�
 void moter_AD(int on_off, int front, int master_moter_power)  //斜めに動く関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", master_moter_power);
+    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, 0);
     analogWrite(pwm_c, 0);
@@ -275,7 +275,7 @@ void moter_AD(int on_off, int front, int master_moter_power)  //斜めに動く�
 void moter_spin(int on_off, int left, int master_moter_power)  //回転する関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", master_moter_power);
+    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -312,7 +312,7 @@ void moter_initialization() {
     moter_error_total[i] = 0;
   }
   pid_timer_sync = 0;
-  pid_timer_base = millis();
+  pid_timer_base = 0;
   pre_encoder_a = moter_enc_list[0];
   pre_encoder_b = moter_enc_list[1];
 }
@@ -427,8 +427,7 @@ void controller_move() {
   lx_state = getAxiState("LX");
   ly_state = getAxiState("LY");
 
-  //前後左右
-  if (lx_state == 0) {
+  if (lx_state <= 1 && lx_state >= -1) {
     //縦移動
     if (ly_state < 0) {
       //下
@@ -438,8 +437,7 @@ void controller_move() {
       //上
       moter_front(HIGH, LOW, wheel_speed_left());
     }
-  }
-  if (ly_state == 0) {
+  } else if (ly_state <= 1 && ly_state >= -1) {
     //横移動
     if (lx_state > 0) {
       //右
@@ -449,9 +447,8 @@ void controller_move() {
       //左
       moter_right(HIGH, LOW, wheel_speed_left());
     }
-  }
-  //斜め
-  if (lx_state != 0 && lx_state != 0) {
+  } else {
+    //斜め
     if (lx_state > 0 && ly_state < 0) {
       //右斜め前
       moter_AD(HIGH, HIGH, wheel_speed_left());
@@ -611,31 +608,29 @@ void encoder_d() {
 
 //基準処理（主モーター）
 int moter_pid_base(String master_moter_name, int master_speed) {
-  if ((master_moter_name.equals("a") || master_moter_name.equals("b")) && tact_checker[1] == LOW) {
+  if ((master_moter_name  == "a" || master_moter_name == "b") && (tact_checker[1] == LOW && tact_checker[2] == LOW)) {
     //1秒に一回制御を行う
-    if (millis() - pid_timer_base > 1000) {
+    if (millis() - pid_timer_base > 50) {
 
       //タイマーの初期化
       pid_timer_base = millis();
 
       //スティックの倒され具合によって目標値を設定
-      if (master_speed == 200) {
-        Target_RPM_moter = 1200;
-      } else if (master_speed == 100) {
-        Target_RPM_moter = 600;
-      } else if (master_speed == 66) {
-        Target_RPM_moter = 400;
-      } else if (master_speed == 50) {
-        Target_RPM_moter = 300;
+      if (max_straight_speed) {
+        Target_RPM_moter = 60;
+      } else if (max_straight_speed / 2) {
+        Target_RPM_moter = 30;
+      } else if (max_straight_speed / 3) {
+        Target_RPM_moter = 20;
+      } else {
+        Target_RPM_moter = 15;
       }
 
       //SerialUSB.println(moter_proportional_base(master_moter_name));
-      moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name) + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
+      moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);  // + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
 
-      /*
-      SerialUSB.print("  speed: ");
-      SerialUSB.println(moter_base_speed);
-*/
+      //SerialUSB.print("  speed: ");
+      //SerialUSB.println(moter_proportional_base(master_moter_name));
 
       //異常な値を与えないようにする
       if (moter_base_speed > 255) {
@@ -662,19 +657,23 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 int moter_proportional_base(String master_moter_name) {
   int one_second_encoder;
   if (master_moter_name.equals("a")) {
+    int moter_enc = abs(moter_enc_list[0]);
     //1秒間あたりのモーターの回転数
-    one_second_encoder = moter_enc_list[0] - pre_encoder_a;
+    one_second_encoder = moter_enc - pre_encoder_a;
     //現在の値を1秒後に使えるようにする
-    pre_encoder_a = moter_enc_list[0];
+    pre_encoder_a = moter_enc;
+    //SerialUSB.println(one_second_encoder);
   } else {
-    one_second_encoder = moter_enc_list[1] - pre_encoder_b;
-    pre_encoder_b = moter_enc_list[1];
+    int moter_enc = abs(moter_enc_list[1]);
+    one_second_encoder = moter_enc - pre_encoder_b;
+    pre_encoder_b = moter_enc;
   }
   //SerialUSB.print(one_second_encoder);
   //目標値の誤差÷6　6はanalogWriteに与える第二引数1あたりのモーターの回転量
   return (Target_RPM_moter - one_second_encoder) / Rotate_Unit;
 }
 
+/*
 //I制御
 <<<<<<< HEAD
 =======
@@ -693,14 +692,15 @@ int moter_proportional_base(String master_moter_name) {
 //D制御
 
 
->>>>>>> 24e8f3723ba2d6f753f12f3d6c3328de2796e2bb
+
+>>>>>>> 8561b9d3e10d8e1288a78cc7820f5310471f2b3f
 int moter_integral_base(String master_moter_name) {
   if (master_moter_name.equals("a")) {
-    return 0;
-  } else {
-    return 0;
+    int one_power = moter_proportional_base() - pre_power_a;
+    pre_power_a = moter_proportional_base();
   }
 }
+
 
 //D制御
 int moter_differential_base(String master_moter_name) {
@@ -711,24 +711,28 @@ int moter_differential_base(String master_moter_name) {
   }
 }
 
+*/
+
 //同期処理（他のモータ）
 void moter_pid_sync(String master_moter_name, int master_speed) {
   if ((master_moter_name == "a" || master_moter_name == "b") && tact_checker[1] == LOW) {
 
-    moter_proportional_sync(master_moter_name);
+    if (millis() - pid_timer_sync > 50) {
 
-    if (millis() - pid_timer_sync > 1000) {
-
-
+      moter_proportional_sync(master_moter_name);
       moter_integral_sync();
       moter_differential_sync();
 
       pid_timer_sync = millis();
+
+      for (int i = 0; i < 4; i++) {
+        moter_power_list[i] += master_speed;
+        //SerialUSB.println(moter_power_list[i]);
+      }
+
     }
     //↓でanalog.writeがとりうる値を超えないようにしている
     for (int i = 0; i < 4; i++) {
-      moter_power_list[i] += master_speed;
-      //SerialUSB.println(moter_power_list[i]);
       if (moter_power_list[i] > 255) {
         moter_power_list[i] = 255;
       } else if (moter_power_list[i] < 0) {
@@ -846,18 +850,26 @@ void debug() {
       for (int i = 0; i < 4; i++) {
         moter_enc_list[i] = 0;
       }
-    }else if (millis() - debug_timer < 2000) {
+    } else if (millis() - debug_timer < 2000) {
       analogWrite(pwm_a, 200);
-    }else if(millis() - debug_timer < 3000){
+      SerialUSB.print("A:");
+      SerialUSB.println(moter_enc_list[0]);
+    } else if (millis() - debug_timer < 3000) {
       analogWrite(pwm_b, 200);
       analogWrite(pwm_a, 0);
-    }else if (millis() - debug_timer < 4000) {
+      SerialUSB.print("B:");
+      SerialUSB.println(moter_enc_list[1]);
+    } else if (millis() - debug_timer < 4000) {
       analogWrite(pwm_c, 200);
       analogWrite(pwm_b, 0);
-    }else if( millis() - debug_timer < 5000) {
+      SerialUSB.print("C:");
+      SerialUSB.println(moter_enc_list[2]);
+    } else if (millis() - debug_timer < 5000) {
       analogWrite(pwm_d, 200);
       analogWrite(pwm_c, 0);
-    }else{
+      SerialUSB.print("D:");
+      SerialUSB.println(moter_enc_list[3]);
+    } else {
       SerialUSB.println("encoder check");
       SerialUSB.println("The normal value : 1200");
       SerialUSB.print("A:");
@@ -889,7 +901,7 @@ void loop() {
     injection();
   }
 
-  /*
+/*
   if (moter_move_check != 0) {
     SerialUSB.print("A:");
     SerialUSB.print(moter_power_list[0]);
