@@ -6,7 +6,7 @@ int posOfServo1 = 0;
 int servo_millis_timer = millis();
 int servo_interval = 50;
 
-int servo_max = 270;
+int servo_max = 90;
 int servo_min = 0;
 
 const int MabuchimoterPWM = 4;   // モータのPWMピン
@@ -47,14 +47,14 @@ int axiState[] = { 0, 0, 0, 0 };
 void setup() {
   servo1.attach(servo1Pin, 500, 2500);
   servo1.write(posOfServo1);
-
+  
+  //アーム
+  //リミットスイッチ
   pinMode(limit_pin[0], INPUT);
   pinMode(limit_pin[1], INPUT);
+  //モーター
   pinMode(MabuchimoterPWM, OUTPUT);
   pinMode(MabuchimotorDir, OUTPUT);
-
-
-
 
 
   //無線通信
@@ -147,12 +147,12 @@ void parseCtlState() {
 
 // --- サーボ制御 ---
 void servo_controle() {
-  if (getBtnState("R1") == 1 || getBtnState("R1") == 1) {
+  if (getBtnState("R1") == 1) {
     if (posOfServo1 > servo_min) {
       posOfServo1 -= servo1Dir;
     }
   }
-  if (getBtnState("L1") == 1 || getBtnState("L1") == 1) {
+  if (getBtnState("L1") == 1) {
     if (posOfServo1 < servo_max) {
       posOfServo1 += servo1Dir;
     }
