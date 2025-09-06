@@ -122,7 +122,7 @@ int servo_millis_timer = millis();
 int servo_interval = 50;
 
 //最大と最小
-int servo_max = 20;
+int servo_max = 120;
 int servo_min = 0;
 
 
