@@ -26,6 +26,7 @@ const int valve_a = 50;
 const int valve_b = 51;
 
 
+
 //モーターの速度の目標値（スティックが完全に倒されている時）
 int max_straight_speed = 200;
 int max_diagonal_speed = 200;
