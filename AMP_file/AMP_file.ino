@@ -18,9 +18,13 @@ const int encoder_c2 = 45;
 const int encoder_d1 = 39;
 const int encoder_d2 = 40;
 //タクトスイッチ
-const int tact_1 = 28;
+const int tact[4] = { 28, 26, 29, 27 };
 //LED
-const int led_1 = 25;
+const int LED[4] = { 25, 24, 23, 22 };
+//射出
+const int valve_a = 50;
+const int valve_b = 51;
+
 
 //モーターの速度の目標値（スティックが完全に倒されている時）
 int max_straight_speed = 200;
@@ -101,8 +105,10 @@ const float DeadLine = 1;                       //I制御における値を調�
 const float alpha = 0.8;                        // 0.0〜1.0で調整（小さいほど滑らか）
 float smoothed_derivative[4] = { 0, 0, 0, 0 };  //D制御のフィルター
 
-int pid_tact_checker = LOW;
-
+//確認用
+int tact_checker[4] = { LOW, LOW, LOW, LOW };
+int pre_tact_state[4] = { LOW, LOW, LOW, LOW };
+int debug_timer = 0;
 
 void setup() {
   //pinModeでそれぞれのモーターを定義//
@@ -141,18 +147,24 @@ void setup() {
   pinMode(encoder_d2, INPUT);
   //割り込み関数の定義
   attachInterrupt(digitalPinToInterrupt(encoder_d1), encoder_d, CHANGE);
+
+  //射出
+  pinMode(valve_a, OUTPUT);
+  pinMode(valve_b, OUTPUT);
+
   //確認用
-  /*
   //タクトスイッチ
-  pinMode(tact_1, INPUT);
-  //LED
-  pinMode(led_1, OUTPUT);
-  */
+  for (int i = 0; i < 4; i++) {
+    //タクトスイッチ
+    pinMode(tact[i], INPUT);
+    //LED
+
+    
+    pinMode(LED[i], OUTPUT);
+  }
+
   SerialUSB.println();
   SerialUSB.println("start");
-
-  pinMode(50,OUTPUT);
-  pinMode(51,OUTPUT);
 }
 
 //モーター
@@ -601,7 +613,7 @@ void encoder_d() {
 
 //基準処理（主モーター）
 int moter_pid_base(String master_moter_name, int master_speed) {
-  if (master_moter_name.equals("a") || master_moter_name.equals("b")) {
+  if ((master_moter_name.equals("a") || master_moter_name.equals("b")) && tact_checker[1] == LOW) {
     //1秒に一回制御を行う
     if (millis() - pid_timer_base > 1000) {
 
@@ -622,7 +634,7 @@ int moter_pid_base(String master_moter_name, int master_speed) {
       //SerialUSB.println(moter_proportional_base(master_moter_name));
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name) + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
 
-/*
+      /*
       SerialUSB.print("  speed: ");
       SerialUSB.println(moter_base_speed);
 */
@@ -701,7 +713,7 @@ int moter_differential_base(String master_moter_name) {
 
 //同期処理（他のモータ）
 void moter_pid_sync(String master_moter_name, int master_speed) {
-  if (master_moter_name == "a" || master_moter_name == "b") {
+  if ((master_moter_name == "a" || master_moter_name == "b") && tact_checker[1] == LOW) {
 
     moter_proportional_sync(master_moter_name);
 
@@ -776,24 +788,93 @@ void moter_differential_sync() {
   }
 }
 
-
-//確認用
-/*
-void pid_delete() {
-  if (digitalRead(tact_1) == HIGH) {
-    if (pid_tact_checker == LOW) {
-      pid_tact_checker = HIGH;
-    } else {
-      pid_tact_checker = LOW;
-    }
+//射出
+void injection() {
+  if (getBtnState("A") == 1 && getBtnState("Y") == 0) {
+    //SerialUSB.println("50 HIGH");
+    digitalWrite(50, LOW);
+    digitalWrite(51, HIGH);
   }
-  if (pid_tact_checker == HIGH) {
-    digitalWrite(led_1, HIGH);
-  } else {
-    digitalWrite(led_1, LOW);
+  if (getBtnState("Y") == 1 && getBtnState("A") == 0) {
+    //SerialUSB.println("51 HIGH");
+    digitalWrite(50, HIGH);
+    digitalWrite(51, LOW);
+  }
+  if (getBtnState("Y") == 0 && getBtnState("A") == 0) {
+    //SerialUSB.println("LOW");
+    digitalWrite(valve_a, HIGH);
+    digitalWrite(valve_b, HIGH);
   }
 }
-*/
+
+
+
+//確認用
+void confirmation() {
+  tact_check();
+  debug();
+}
+
+void tact_check() {
+  for (int i = 0; i < 4; i++) {
+    int tact_state = digitalRead(tact[i]);
+    if (tact_state == LOW && tact_state != pre_tact_state[i]) {
+      if (tact_checker[i] == LOW) {
+        tact_checker[i] = HIGH;
+      } else {
+        tact_checker[i] = LOW;
+      }
+    }
+    if (tact_checker[i] == HIGH) {
+      digitalWrite(LED[i], HIGH);
+    } else {
+      digitalWrite(LED[i], LOW);
+    }
+    pre_tact_state[i] = tact_state;
+  }
+}
+
+void debug() {
+  if (tact_checker[0] == HIGH) {
+    moter_direction_A(HIGH);
+    moter_direction_B(HIGH);
+    moter_direction_C(HIGH);
+    moter_direction_D(HIGH);
+
+
+    if (millis() - debug_timer < 1000) {
+      for (int i = 0; i < 4; i++) {
+        moter_enc_list[i] = 0;
+      }
+    }else if (millis() - debug_timer < 2000) {
+      analogWrite(pwm_a, 200);
+    }else if(millis() - debug_timer < 3000){
+      analogWrite(pwm_b, 200);
+      analogWrite(pwm_a, 0);
+    }else if (millis() - debug_timer < 4000) {
+      analogWrite(pwm_c, 200);
+      analogWrite(pwm_b, 0);
+    }else if( millis() - debug_timer < 5000) {
+      analogWrite(pwm_d, 200);
+      analogWrite(pwm_c, 0);
+    }else{
+      SerialUSB.println("encoder check");
+      SerialUSB.println("The normal value : 1200");
+      SerialUSB.print("A:");
+      SerialUSB.print(moter_enc_list[0]);
+      SerialUSB.print(" B:");
+      SerialUSB.print(moter_enc_list[1]);
+      SerialUSB.print(" C:");
+      SerialUSB.print(moter_enc_list[2]);
+      SerialUSB.print(" D:");
+      SerialUSB.println(moter_enc_list[3]);
+      Serial.println("debug finish");
+      tact_checker[0] = LOW;
+    }
+  } else {
+    debug_timer = millis();
+  }
+}
 
 void loop() {
   if (Serial1.available()) {
@@ -801,25 +882,14 @@ void loop() {
     parseCtlState();
   }
 
-  controller_move();
-  controller_spin();
-
-  if (getBtnState("A") == 1 && getBtnState("Y") == 0) {
-    SerialUSB.println("50 HIGH");
-   digitalWrite(50,LOW);
-   digitalWrite(51,HIGH);
-  }
-  if (getBtnState("Y") == 1 && getBtnState("A") == 0) {
-    SerialUSB.println("51 HIGH");
-   digitalWrite(50,HIGH);
-   digitalWrite(51,LOW);
-  }
-  if(getBtnState("Y") == 0 && getBtnState("A") == 0){
-    SerialUSB.println("LOW");
-   digitalWrite(50,HIGH);
-   digitalWrite(51,HIGH);
+  confirmation();
+  if (tact_checker[0] == LOW) {
+    controller_move();
+    controller_spin();
+    injection();
   }
 
+  /*
   if (moter_move_check != 0) {
     SerialUSB.print("A:");
     SerialUSB.print(moter_power_list[0]);
@@ -831,4 +901,5 @@ void loop() {
     SerialUSB.println(moter_power_list[3]);
     moter_move_check = 0;
   }
+  */
 }
