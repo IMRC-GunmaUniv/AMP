@@ -82,7 +82,7 @@ int Target_RPM_moter = 0;
 //a
 int pre_encoder_a = 0;
 //b
-int pre_encoder_b = 0;
+int pre_encoder_c = 0;
 //PID制御用のタイマー。現在は一秒間に一回行う設定。初期化の値は-1000が好ましい。（動かしてすぐにif文の中に入れるように）
 int pid_timer_base = -1000;
 //
@@ -122,7 +122,7 @@ int servo_millis_timer = millis();
 int servo_interval = 50;
 
 //最大と最小
-int servo_max = 120;
+int servo_max = 20;
 int servo_min = 0;
 
 
@@ -131,7 +131,7 @@ int Mab_dir = HIGH;                 //アームの方向を示す
 int pre_limit_state[2] = { 0, 0 };  //ひとつ前のリミットスイッチの状態
 int MabuchiNeutral = 0;             //アームを動かさないようにするためのもの
 int MabuchiStop[2] = { 0, 0 };      //それぞれの方向へ進まないようにする
-const int MabuchimotorSpeed = 100;   //モーターの速度
+const int MabuchimotorSpeed = 100;  //モーターの速度
 
 
 //確認用
@@ -349,13 +349,13 @@ void moter_front(int on_off, int front, int master_moter_power) {
     if (front == 1) {
       moter_direction_A(LOW);
       moter_direction_B(HIGH);
-      moter_direction_C(LOW);
-      moter_direction_D(HIGH);
+      moter_direction_C(HIGH);
+      moter_direction_D(LOW);
     } else {
       moter_direction_A(HIGH);
       moter_direction_B(LOW);
-      moter_direction_C(HIGH);
-      moter_direction_D(LOW);
+      moter_direction_C(LOW);
+      moter_direction_D(HIGH);
     }
   }
 }
@@ -370,53 +370,53 @@ void moter_right(int on_off, int front, int master_moter_power) {
     analogWrite(pwm_c, moter_power_list[2]);
     analogWrite(pwm_d, moter_power_list[3]);
     if (front == 1) {
-      moter_direction_A(LOW);
+      moter_direction_A(HIGH);
       moter_direction_B(LOW);
       moter_direction_C(HIGH);
-      moter_direction_D(HIGH);
+      moter_direction_D(LOW);
     } else {
-      moter_direction_A(HIGH);
+      moter_direction_A(LOW);
       moter_direction_B(HIGH);
       moter_direction_C(LOW);
-      moter_direction_D(LOW);
+      moter_direction_D(HIGH);
     }
   }
 }
 
-void moter_BC(int on_off, int front, int master_moter_power)  //斜めに動く関数//
+void moter_AB(int on_off, int front, int master_moter_power)  //斜めに動く関数//
 {
   if (on_off == 1)  //動かすモーターを固定//
   {
-    moter_pid_sync("b", moter_pid_base("b", master_moter_power));
-    analogWrite(pwm_a, 0);
+    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
-    analogWrite(pwm_c, moter_power_list[2]);
+    analogWrite(pwm_c, 0);
     analogWrite(pwm_d, 0);
     if (front == 1)  //モーターの回転の向き//
     {
+      moter_direction_A(LOW);
       moter_direction_B(HIGH);
-      moter_direction_C(LOW);
     } else {
+      moter_direction_A(HIGH);
       moter_direction_B(LOW);
-      moter_direction_C(HIGH);
     }
   }
 }
 
-void moter_AD(int on_off, int front, int master_moter_power)  //斜めに動く関数//
+void moter_CD(int on_off, int front, int master_moter_power)  //斜めに動く関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
-    analogWrite(pwm_a, moter_power_list[0]);
+    moter_pid_sync("c", moter_pid_base("c", master_moter_power));
+    analogWrite(pwm_a, 0);
     analogWrite(pwm_b, 0);
-    analogWrite(pwm_c, 0);
+    analogWrite(pwm_c, moter_power_list[2]);
     analogWrite(pwm_d, moter_power_list[3]);
     if (front == 1) {
-      moter_direction_A(LOW);
-      moter_direction_D(HIGH);
-    } else {
-      moter_direction_A(HIGH);
+      moter_direction_C(HIGH);
       moter_direction_D(LOW);
+    } else {
+      moter_direction_C(LOW);
+      moter_direction_D(HIGH);
     }
   }
 }
@@ -447,8 +447,8 @@ void moter_initialization() {
   //モータの動きを初期化
   moter_front(0, 0, 0);
   moter_right(0, 0, 0);
-  moter_BC(0, 0, 0);
-  moter_AD(0, 0, 0);
+  moter_AB(0, 0, 0);
+  moter_CD(0, 0, 0);
   moter_spin(0, 0, 0);
   analogWrite(pwm_a, 0);
   analogWrite(pwm_b, 0);
@@ -460,9 +460,9 @@ void moter_initialization() {
     moter_error_total[i] = 0;
   }
   pid_timer_sync = 0;
-  pid_timer_base = 0;
+  pid_timer_base = millis();
   pre_encoder_a = moter_enc_list[0];
-  pre_encoder_b = moter_enc_list[1];
+  pre_encoder_c = moter_enc_list[2];
 }
 
 
@@ -499,19 +499,19 @@ void controller_move() {
     //斜め
     if (lx_state > 0 && ly_state < 0) {
       //右斜め前
-      moter_AD(HIGH, HIGH, wheel_speed_left());
+      moter_CD(HIGH, HIGH, wheel_speed_left());
     }
     if (lx_state < 0 && ly_state > 0) {
       //左斜め下
-      moter_AD(HIGH, LOW, wheel_speed_left());
+      moter_CD(HIGH, LOW, wheel_speed_left());
     }
     if (lx_state < 0 && ly_state < 0) {
       //左斜め前
-      moter_BC(HIGH, HIGH, wheel_speed_left());
+      moter_AB(HIGH, HIGH, wheel_speed_left());
     }
     if (lx_state > 0 && ly_state > 0) {
       //右斜め下
-      moter_BC(HIGH, LOW, wheel_speed_left());
+      moter_AB(HIGH, LOW, wheel_speed_left());
     }
   }
 }
@@ -660,14 +660,18 @@ int moter_pid_base(String master_moter_name, int master_speed) {
       pid_timer_base = millis();
 
       //スティックの倒され具合によって目標値を設定
-      if (max_straight_speed) {
+      if (master_speed == max_straight_speed) {
         Target_RPM_moter = 60;
-      } else if (max_straight_speed / 2) {
+        //SerialUSB.println(4);
+      } else if (master_speed == (max_straight_speed / 2)) {
         Target_RPM_moter = 30;
-      } else if (max_straight_speed / 3) {
+        //SerialUSB.println(3);
+      } else if (master_speed == (max_straight_speed / 3)) {
         Target_RPM_moter = 20;
+        //SerialUSB.println(2);
       } else {
         Target_RPM_moter = 15;
+        //SerialUSB.println(1);
       }
 
       //SerialUSB.println(moter_proportional_base(master_moter_name));
@@ -708,11 +712,11 @@ int moter_proportional_base(String master_moter_name) {
     pre_encoder_a = moter_enc;
     //SerialUSB.println(one_second_encoder);
   } else {
-    int moter_enc = abs(moter_enc_list[1]);
-    one_second_encoder = moter_enc - pre_encoder_b;
-    pre_encoder_b = moter_enc;
+    int moter_enc = abs(moter_enc_list[2]);
+    one_second_encoder = moter_enc - pre_encoder_c;
+    pre_encoder_c = moter_enc;
   }
-  //SerialUSB.print(one_second_encoder);
+  //SerialUSB.println((Target_RPM_moter - one_second_encoder) / Rotate_Unit);
   //目標値の誤差÷6　6はanalogWriteに与える第二引数1あたりのモーターの回転量
   return (Target_RPM_moter - one_second_encoder) / Rotate_Unit;
 }
@@ -720,6 +724,7 @@ int moter_proportional_base(String master_moter_name) {
 /*
 //I制御
 int moter_integral_base(String master_moter_name) {
+  
   if (master_moter_name.equals("a")) {
     int one_power = moter_proportional_base() - pre_power_a;
     pre_power_a = moter_proportional_base();
@@ -743,8 +748,8 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
     if (millis() - pid_timer_sync > 50) {
 
       moter_proportional_sync(master_moter_name);
-      moter_integral_sync();
-      moter_differential_sync();
+      //moter_integral_sync();
+      //moter_differential_sync();
 
       pid_timer_sync = millis();
 
@@ -776,7 +781,7 @@ void moter_proportional_sync(String master_moter_name) {
   if (master_moter_name == "a") {
     master_encoder = abs(moter_enc_list[0]);  //目標値の設定（この制御では一つのホイールの値を目標値とし、その他のホイールをその値に合わせる）
   } else if (master_moter_name == "b") {
-    master_encoder = abs(moter_enc_list[1]);
+    master_encoder = abs(moter_enc_list[2]);
   }
   for (int i = 0; i < 4; i++) {
     sync_error_list[i] = master_encoder - abs(moter_enc_list[i]);
@@ -843,7 +848,7 @@ void servo_controle() {
       posOfServo1 -= servo1Dir;
     }
   }
-  if (getBtnState("L1") == 1 || getBtnState("L1") == 1 ) {
+  if (getBtnState("L1") == 1 || getBtnState("L1") == 1) {
     if (posOfServo1 < servo_max) {
       posOfServo1 += servo1Dir;
     }
@@ -925,7 +930,6 @@ void tact_check() {
 
 //デバッグ用関数(タクトスイッチの一番左)
 void debug() {
-  /*
   if (tact_checker[0] == HIGH) {
     moter_direction_A(HIGH);
     moter_direction_B(HIGH);
@@ -951,30 +955,31 @@ void debug() {
         SerialUSB.print("A:");
         SerialUSB.println(moter_enc_list[0]);
         once = 1;
+        analogWrite(pwm_a, 0);
       }
       analogWrite(pwm_b, 200);
-      analogWrite(pwm_a, 0);
 
     } else if (millis() - debug_timer < 4000) {
       if (once == 1) {
         SerialUSB.print("B:");
         SerialUSB.println(moter_enc_list[1]);
         once = 0;
+              analogWrite(pwm_b, 0);
       }
       analogWrite(pwm_c, 200);
-      analogWrite(pwm_b, 0);
 
     } else if (millis() - debug_timer < 5000) {
       if (once == 0) {
         SerialUSB.print("C:");
         SerialUSB.println(moter_enc_list[2]);
         once = 1;
+              analogWrite(pwm_c, 0);
       }
       analogWrite(pwm_d, 200);
-      analogWrite(pwm_c, 0);
 
     } else if (millis() - debug_timer < 6000) {
       if (once == 1) {
+              analogWrite(pwm_d, 0);
         SerialUSB.print("D:");
         SerialUSB.println(moter_enc_list[3]);
         SerialUSB.println();
@@ -1006,12 +1011,13 @@ void debug() {
       if (MabuchiStop[0] == 0) {
         analogWrite(MabuchimoterPWM, MabuchimotorSpeed);
       }
-
+      
     } else if (millis() - debug_timer < 9000) {
       if (once == 1) {
         SerialUSB.println();
         SerialUSB.println("servo check");
         once = 0;
+        analogWrite(MabuchimoterPWM, 0);
       }
       if (posOfServo1 < servo_max) {
         posOfServo1 += servo1Dir;
@@ -1024,14 +1030,13 @@ void debug() {
       servo1.write(posOfServo1);
 
     } else {
-      Serial.println("debug finish");
+      SerialUSB.println("debug finish");
       tact_checker[0] = LOW;
     }
 
   } else {
     debug_timer = millis();
   }
-  */
 }
 //タクトスイッチの使用状況
 //一番左:デバッグ用（それぞれの動作確認）
@@ -1058,17 +1063,17 @@ void loop() {
     motor_control();
   }
 
-  /*
+/*
   if (moter_move_check != 0) {
     SerialUSB.print("A:");
-    SerialUSB.print(moter_power_list[0]);
+    SerialUSB.print(moter_enc_list[0]);
     SerialUSB.print(" B:");
-    SerialUSB.print(moter_power_list[1]);
+    SerialUSB.print(moter_enc_list[1]);
     SerialUSB.print(" C:");
-    SerialUSB.print(moter_power_list[2]);
+    SerialUSB.print(moter_enc_list[2]);
     SerialUSB.print(" D:");
-    SerialUSB.println(moter_power_list[3]);
+    SerialUSB.println(moter_enc_list[3]);
     moter_move_check = 0;
   }
-  */
+*/
 }
