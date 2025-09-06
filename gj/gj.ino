@@ -70,7 +70,7 @@ int rx_state = 0;
 
 //PID
 //基準処理（主モーター）
-const float Kp_moter_base = 0.5;
+const float Kp_moter_base = 1;
 const float Ki_moter_base = 0.5;
 const float Kd_moter_base = 0.1;
 //analogWriteの1あたりでモーターが50msに何回転するか
@@ -122,7 +122,7 @@ int servo_millis_timer = millis();
 int servo_interval = 50;
 
 //最大と最小
-int servo_max = 90;
+int servo_max = 120;
 int servo_min = 0;
 
 
@@ -131,7 +131,7 @@ int Mab_dir = HIGH;                 //アームの方向を示す
 int pre_limit_state[2] = { 0, 0 };  //ひとつ前のリミットスイッチの状態
 int MabuchiNeutral = 0;             //アームを動かさないようにするためのもの
 int MabuchiStop[2] = { 0, 0 };      //それぞれの方向へ進まないようにする
-const int MabuchimotorSpeed = 30;   //モーターの速度
+const int MabuchimotorSpeed = 100;   //モーターの速度
 
 
 //確認用
@@ -838,12 +838,12 @@ void injection() {
 //アーム
 // --- サーボ制御 ---
 void servo_controle() {
-  if (getBtnState("R1") == 1) {
+  if (getBtnState("R1") == 1 || getBtnState("R1") == 1) {
     if (posOfServo1 > servo_min) {
       posOfServo1 -= servo1Dir;
     }
   }
-  if (getBtnState("L1") == 1) {
+  if (getBtnState("L1") == 1 || getBtnState("L1") == 1 ) {
     if (posOfServo1 < servo_max) {
       posOfServo1 += servo1Dir;
     }
@@ -925,6 +925,7 @@ void tact_check() {
 
 //デバッグ用関数(タクトスイッチの一番左)
 void debug() {
+  /*
   if (tact_checker[0] == HIGH) {
     moter_direction_A(HIGH);
     moter_direction_B(HIGH);
@@ -1030,6 +1031,7 @@ void debug() {
   } else {
     debug_timer = millis();
   }
+  */
 }
 //タクトスイッチの使用状況
 //一番左:デバッグ用（それぞれの動作確認）
@@ -1049,6 +1051,7 @@ void loop() {
   limit_check();
 
   if (tact_checker[0] == LOW) {
+    servo_controle();
     controller_move();
     controller_spin();
     injection();
