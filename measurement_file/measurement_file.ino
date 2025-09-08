@@ -64,7 +64,7 @@ void setup() {
   pinMode(direction_d, OUTPUT);
 
   //無線通信
-  Serial.begin(115200);  // PC
+  SerialUSB.begin(115200);  // PC
   Serial1.begin(115200);  // ESP
 
   //PID
@@ -89,8 +89,8 @@ void setup() {
   //割り込み関数の定義
   attachInterrupt(digitalPinToInterrupt(encoder_d1), encoder_d, CHANGE);
 
-  Serial.println();
-  Serial.println("start");
+  SerialUSB.println();
+  SerialUSB.println("start");
 }
 
 
@@ -207,7 +207,7 @@ void parseCtlState() {
   // "DATA: "から始まらないものは解析しない
   // "INFO: Controller has disconnected"とかそういうメッセージなので、そのままPC側に送る
   if (!data.startsWith("DATA: ")) {
-    Serial.println(data);
+    SerialUSB.println(data);
     return;
   }
 
@@ -274,37 +274,37 @@ void loop() {
     analogWrite(pwm_b, moter_speed);
     analogWrite(pwm_c, moter_speed);
     analogWrite(pwm_d, moter_speed);
-    if (millis() - timer > 10000) {
-      Serial.println();
-      Serial.println("finish");
-      Serial.print("A:");
-      Serial.print(moter_enc_list[0]);
-      Serial.print(" B:");
-      Serial.print(moter_enc_list[1]);
-      Serial.print(" C:");
-      Serial.print(moter_enc_list[2]);
-      Serial.print(" D:");
-      Serial.println(moter_enc_list[3]);
+    if (millis() - timer > 500) {
+      SerialUSB.println();
+      SerialUSB.println("finish");
+      SerialUSB.print("A:");
+      SerialUSB.print(moter_enc_list[0]);
+      SerialUSB.print(" B:");
+      SerialUSB.print(moter_enc_list[1]);
+      SerialUSB.print(" C:");
+      SerialUSB.print(moter_enc_list[2]);
+      SerialUSB.print(" D:");
+      SerialUSB.println(moter_enc_list[3]);
       for (int i = 0; i < 4; i++) {
         avr += abs(moter_enc_list[i]);
       }
       avr /= 4;
-      Serial.print("ten second:");
-      Serial.println(avr);
-      Serial.print("one second:");
-      Serial.println(avr / 10);
+      SerialUSB.print("ten second:");
+      SerialUSB.println(avr);
+      SerialUSB.print("one second:");
+      SerialUSB.println(avr / 10);
       check = 0;
 
-    } else if (millis() - one_second > 1000) {
-      Serial.println(count);
-      Serial.print("A:");
-      Serial.print(moter_enc_list[0]);
-      Serial.print(" B:");
-      Serial.print(moter_enc_list[1]);
-      Serial.print(" C:");
-      Serial.print(moter_enc_list[2]);
-      Serial.print(" D:");
-      Serial.println(moter_enc_list[3]);
+    } else if (millis() - one_second > 50) {
+      SerialUSB.println(count);
+      SerialUSB.print("A:");
+      SerialUSB.print(moter_enc_list[0]);
+      SerialUSB.print(" B:");
+      SerialUSB.print(moter_enc_list[1]);
+      SerialUSB.print(" C:");
+      SerialUSB.print(moter_enc_list[2]);
+      SerialUSB.print(" D:");
+      SerialUSB.println(moter_enc_list[3]);
       count += 1;
       one_second = millis();
     }
