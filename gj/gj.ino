@@ -24,7 +24,7 @@ const int encoder_d2 = 40;
 const int valve_a = 50;
 const int valve_b = 51;
 //サーボ
-const int servo1Pin = 12;  // servo1 接 Pin 11,12,13
+const int servo1Pin = 11;  // servo1 接 Pin 11,12,13
 //アーム
 const int MabuchimoterPWM = 4;   // モータのPWMピン
 const int MabuchimotorDir = 32;  // モータの方向制御
