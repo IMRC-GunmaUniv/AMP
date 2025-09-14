@@ -9,8 +9,8 @@ const int pwm_b = 2;
 const int direction_b = 30;
 const int pwm_c = 6;
 const int direction_c = 34;
-const int pwm_d = 5;
-const int direction_d = 33;
+const int pwm_d = 7;
+const int direction_d = 35;
 //エンコーダ
 const int encoder_a1 = 41;
 const int encoder_a2 = 42;
@@ -24,15 +24,17 @@ const int encoder_d2 = 40;
 const int valve_a = 50;
 const int valve_b = 51;
 //サーボ
-const int servo1Pin = 12;  // servo1 接 Pin 11,12,13
+const int servo1Pin = 13;  // servo1 接 Pin 11,12,13
 //アーム
 const int MabuchimoterPWM = 4;   // モータのPWMピン
 const int MabuchimotorDir = 32;  // モータの方向制御
 const int limit_pin[2] = { 38, 36 };
 //タクトスイッチ
 const int tact[4] = { 28, 26, 29, 27 };
-//LED
-const int LED[4] = { 25, 24, 23, 22 };
+//LED(基盤にあるデバッグのためのモノ)
+const int debug_LED[4] = { 25, 24, 23, 22 };
+//LED(昆虫図鑑完成時に点灯させるためのモノ)
+const int finish_LED_pin = 53;
 
 
 //無線
@@ -59,9 +61,9 @@ int axiState[] = { 0, 0, 0, 0 };
 
 //足回り
 //モーターの速度の目標値（スティックが完全に倒されている時）
-int max_straight_speed = 200;
-int max_diagonal_speed = 200;
-int max_spin_speed = 200;
+int max_straight_speed = 230;
+int max_diagonal_speed = 230;
+int max_spin_speed = 230;
 
 //左スティックの状態を表す変数
 int lx_state = 0;
@@ -82,7 +84,11 @@ int Target_RPM_moter = 0;
 //a
 int pre_encoder_a = 0;
 //b
+int pre_encoder_b = 0;
+//c
 int pre_encoder_c = 0;
+//d
+int pre_encoder_d = 0;
 //PID制御用のタイマー。現在は一秒間に一回行う設定。初期化の値は-1000が好ましい。（動かしてすぐにif文の中に入れるように）
 int pid_timer_base = -1000;
 //
@@ -124,6 +130,10 @@ int servo_interval = 50;
 //最大と最小
 int servo_max = 120;
 int servo_min = 0;
+/*サーボ反転用
+int servo_max = 180;
+int servo_min = 60;
+*/
 
 
 //アーム
@@ -132,6 +142,11 @@ int pre_limit_state[2] = { 0, 0 };  //ひとつ前のリミットスイッチの
 int MabuchiNeutral = 0;             //アームを動かさないようにするためのもの
 int MabuchiStop[2] = { 0, 0 };      //それぞれの方向へ進まないようにする
 const int MabuchimotorSpeed = 100;  //モーターの速度
+
+
+//LED(昆虫図鑑完成時に点灯させるためのモノ)
+int finish_LED_state = LOW;
+int pre_right_state = LOW;
 
 
 //確認用
@@ -181,20 +196,22 @@ void setup() {
   //モーター
   pinMode(MabuchimoterPWM, OUTPUT);
   pinMode(MabuchimotorDir, OUTPUT);
+  //LED(昆虫図鑑完成時に点灯させるためのモノ)
+  pinMode(finish_LED_pin, OUTPUT);
 
   //確認用
   //タクトスイッチ
   for (int i = 0; i < 4; i++) {
     //タクトスイッチ
     pinMode(tact[i], INPUT);
-    //LED
-    pinMode(LED[i], OUTPUT);
+    //debug_LED
+    pinMode(debug_LED[i], OUTPUT);
   }
 
 
   //無線通信
   Serial1.begin(115200);    // ESP用
-  SerialUSB.begin(115200);  // PC
+  Serial.begin(115200);  // PC
 
 
   //割り込み関数の定義
@@ -214,8 +231,8 @@ void setup() {
   servo1.write(posOfServo1);
 
 
-  SerialUSB.println();
-  SerialUSB.println("start");
+  Serial.println();
+  Serial.println("start");
 }
 
 
@@ -278,7 +295,7 @@ void parseCtlState() {
   // "DATA: "から始まらないものは解析しない
   // "INFO: Controller has disconnected"とかそういうメッセージなので、そのままPC側に送る
   if (!data.startsWith("DATA: ")) {
-    SerialUSB.println(data);
+    Serial.println(data);
     return;
   }
 
@@ -341,7 +358,11 @@ void moter_direction_D(int front) {
 void moter_front(int on_off, int front, int master_moter_power) {
   //前か後ろに移動
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    if (tact_checker[3] == LOW) {
+      moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    } else {
+      moter_pid_sync("b", moter_pid_base("b", master_moter_power));
+    }
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -364,7 +385,11 @@ void moter_right(int on_off, int front, int master_moter_power) {
   //右か左に移動
 
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    if (tact_checker[3] == LOW) {
+      moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    } else {
+      moter_pid_sync("b", moter_pid_base("b", master_moter_power));
+    }
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -387,7 +412,11 @@ void moter_AB(int on_off, int front, int master_moter_power)  //斜めに動く�
 {
   if (on_off == 1)  //動かすモーターを固定//
   {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    if (tact_checker[3] == LOW) {
+      moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    } else {
+      moter_pid_sync("b", moter_pid_base("b", master_moter_power));
+    }
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, 0);
@@ -406,7 +435,11 @@ void moter_AB(int on_off, int front, int master_moter_power)  //斜めに動く�
 void moter_CD(int on_off, int front, int master_moter_power)  //斜めに動く関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("c", moter_pid_base("c", master_moter_power));
+    if (tact_checker[3] == LOW) {
+      moter_pid_sync("c", moter_pid_base("c", master_moter_power));
+    } else {
+      moter_pid_sync("d", moter_pid_base("d", master_moter_power));
+    }
     analogWrite(pwm_a, 0);
     analogWrite(pwm_b, 0);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -424,7 +457,11 @@ void moter_CD(int on_off, int front, int master_moter_power)  //斜めに動く�
 void moter_spin(int on_off, int left, int master_moter_power)  //回転する関数//
 {
   if (on_off == 1) {
-    moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    if (tact_checker[3] == LOW) {
+      moter_pid_sync("a", moter_pid_base("a", master_moter_power));
+    } else {
+      moter_pid_sync("b", moter_pid_base("b", master_moter_power));
+    }
     analogWrite(pwm_a, moter_power_list[0]);
     analogWrite(pwm_b, moter_power_list[1]);
     analogWrite(pwm_c, moter_power_list[2]);
@@ -474,44 +511,45 @@ void controller_move() {
   }
   lx_state = getAxiState("LX");
   ly_state = getAxiState("LY");
-
-  if (lx_state <= 1 && lx_state >= -1) {
-    //縦移動
-    if (ly_state < 0) {
-      //下
-      moter_front(HIGH, HIGH, wheel_speed_left());
-    }
-    if (ly_state > 0) {
-      //上
-      moter_front(HIGH, LOW, wheel_speed_left());
-    }
-  } else if (ly_state <= 1 && ly_state >= -1) {
-    //横移動
-    if (lx_state > 0) {
-      //右
-      moter_right(HIGH, HIGH, wheel_speed_left());
-    }
-    if (lx_state < 0) {
-      //左
-      moter_right(HIGH, LOW, wheel_speed_left());
-    }
-  } else {
-    //斜め
-    if (lx_state > 0 && ly_state < 0) {
-      //右斜め前
-      moter_CD(HIGH, HIGH, wheel_speed_left());
-    }
-    if (lx_state < 0 && ly_state > 0) {
-      //左斜め下
-      moter_CD(HIGH, LOW, wheel_speed_left());
-    }
-    if (lx_state < 0 && ly_state < 0) {
-      //左斜め前
-      moter_AB(HIGH, HIGH, wheel_speed_left());
-    }
-    if (lx_state > 0 && ly_state > 0) {
-      //右斜め下
-      moter_AB(HIGH, LOW, wheel_speed_left());
+  if (rx_state == 0) {
+    if (lx_state <= 1 && lx_state >= -1) {
+      //縦移動
+      if (ly_state < 0) {
+        //下
+        moter_front(HIGH, HIGH, wheel_speed_left());
+      }
+      if (ly_state > 0) {
+        //上
+        moter_front(HIGH, LOW, wheel_speed_left());
+      }
+    } else if (ly_state <= 1 && ly_state >= -1) {
+      //横移動
+      if (lx_state > 0) {
+        //右
+        moter_right(HIGH, HIGH, wheel_speed_left());
+      }
+      if (lx_state < 0) {
+        //左
+        moter_right(HIGH, LOW, wheel_speed_left());
+      }
+    } else {
+      //斜め
+      if (lx_state > 0 && ly_state < 0) {
+        //右斜め前
+        moter_CD(HIGH, HIGH, wheel_speed_left());
+      }
+      if (lx_state < 0 && ly_state > 0) {
+        //左斜め下
+        moter_CD(HIGH, LOW, wheel_speed_left());
+      }
+      if (lx_state < 0 && ly_state < 0) {
+        //左斜め前
+        moter_AB(HIGH, HIGH, wheel_speed_left());
+      }
+      if (lx_state > 0 && ly_state > 0) {
+        //右斜め下
+        moter_AB(HIGH, LOW, wheel_speed_left());
+      }
     }
   }
 }
@@ -568,10 +606,10 @@ int wheel_speed_left() {
       return max_diagonal_speed;
     }
     if (xy_coordinate <= 13 && xy_coordinate > 5) {
-      return max_diagonal_speed / 2;
+      return max_diagonal_speed / 3;
     }
     if (xy_coordinate <= 5) {
-      return max_diagonal_speed / 3;
+      return max_diagonal_speed / 4;
     }
   }
 }
@@ -652,7 +690,7 @@ void encoder_d() {
 
 //基準処理（主モーター）
 int moter_pid_base(String master_moter_name, int master_speed) {
-  if ((master_moter_name == "a" || master_moter_name == "b") && (tact_checker[1] == LOW && tact_checker[2] == LOW)) {
+  if ((master_moter_name != "no" || master_moter_name != "nothing") && (tact_checker[1] == LOW && tact_checker[2] == LOW)) {
     //1秒に一回制御を行う
     if (millis() - pid_timer_base > 50) {
 
@@ -661,24 +699,24 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 
       //スティックの倒され具合によって目標値を設定
       if (master_speed == max_straight_speed) {
-        Target_RPM_moter = 60;
-        //SerialUSB.println(4);
-      } else if (master_speed == (max_straight_speed / 2)) {
-        Target_RPM_moter = 30;
-        //SerialUSB.println(3);
+        Target_RPM_moter = 69;
+        //Serial.println(4);
+      } else if (master_speed >= (max_straight_speed / 2)) {
+        Target_RPM_moter = 35;
+        //Serial.println(3);
       } else if (master_speed == (max_straight_speed / 3)) {
-        Target_RPM_moter = 20;
-        //SerialUSB.println(2);
+        Target_RPM_moter = 23;
+        //Serial.println(2);
       } else {
-        Target_RPM_moter = 15;
-        //SerialUSB.println(1);
+        Target_RPM_moter = 17;
+        //Serial.println(1);
       }
 
-      //SerialUSB.println(moter_proportional_base(master_moter_name));
+      //Serial.println(moter_proportional_base(master_moter_name));
       moter_base_speed = master_speed + Kp_moter_base * moter_proportional_base(master_moter_name);  // + Ki_moter_base * moter_integral_base(master_moter_name) + Kd_moter_base * moter_differential_base(master_moter_name);
 
-      //SerialUSB.print("  speed: ");
-      //SerialUSB.println(moter_proportional_base(master_moter_name));
+      //Serial.print("  speed: ");
+      //Serial.println(moter_proportional_base(master_moter_name));
 
       //異常な値を与えないようにする
       if (moter_base_speed > 255) {
@@ -704,19 +742,28 @@ int moter_pid_base(String master_moter_name, int master_speed) {
 //P制御
 int moter_proportional_base(String master_moter_name) {
   int one_second_encoder;
-  if (master_moter_name.equals("a")) {
+  //bとdは普段使わないPIDに使わないモーターだが保険用として定義した
+  if (master_moter_name == "a") {
     int moter_enc = abs(moter_enc_list[0]);
     //1秒間あたりのモーターの回転数
     one_second_encoder = moter_enc - pre_encoder_a;
     //現在の値を1秒後に使えるようにする
     pre_encoder_a = moter_enc;
-    //SerialUSB.println(one_second_encoder);
-  } else {
+    //Serial.println(one_second_encoder);
+  } else if (master_moter_name == "b") {
+    int moter_enc = abs(moter_enc_list[1]);
+    one_second_encoder = moter_enc - pre_encoder_b;
+    pre_encoder_b = moter_enc;
+  } else if (master_moter_name == "c") {
     int moter_enc = abs(moter_enc_list[2]);
     one_second_encoder = moter_enc - pre_encoder_c;
     pre_encoder_c = moter_enc;
+  } else if (master_moter_name == "d") {
+    int moter_enc = abs(moter_enc_list[3]);
+    one_second_encoder = moter_enc - pre_encoder_d;
+    pre_encoder_d = moter_enc;
   }
-  //SerialUSB.println((Target_RPM_moter - one_second_encoder) / Rotate_Unit);
+  //Serial.println((Target_RPM_moter - one_second_encoder) / Rotate_Unit);
   //目標値の誤差÷6　6はanalogWriteに与える第二引数1あたりのモーターの回転量
   return (Target_RPM_moter - one_second_encoder) / Rotate_Unit;
 }
@@ -743,7 +790,7 @@ int moter_differential_base(String master_moter_name) {
 
 //同期処理（他のモータ）
 void moter_pid_sync(String master_moter_name, int master_speed) {
-  if ((master_moter_name == "a" || master_moter_name == "b") && tact_checker[2] == LOW) {
+  if ((master_moter_name != "no" || master_moter_name != "nothing") && tact_checker[2] == LOW) {
 
     if (millis() - pid_timer_sync > 50) {
 
@@ -755,7 +802,7 @@ void moter_pid_sync(String master_moter_name, int master_speed) {
 
       for (int i = 0; i < 4; i++) {
         moter_power_list[i] += master_speed;
-        //SerialUSB.println(moter_power_list[i]);
+        //Serial.println(moter_power_list[i]);
       }
     }
     //↓でanalog.writeがとりうる値を超えないようにしている
@@ -781,12 +828,16 @@ void moter_proportional_sync(String master_moter_name) {
   if (master_moter_name == "a") {
     master_encoder = abs(moter_enc_list[0]);  //目標値の設定（この制御では一つのホイールの値を目標値とし、その他のホイールをその値に合わせる）
   } else if (master_moter_name == "b") {
+    master_encoder = abs(moter_enc_list[1]);
+  } else if (master_moter_name == "c") {
     master_encoder = abs(moter_enc_list[2]);
+  } else if (master_moter_name == "d") {
+    master_encoder = abs(moter_enc_list[3]);
   }
   for (int i = 0; i < 4; i++) {
     sync_error_list[i] = master_encoder - abs(moter_enc_list[i]);
     moter_power_list[i] = Kp_moter_sync * sync_error_list[i];
-    //SerialUSB.println(moter_power_list[i]);
+    //Serial.println(moter_power_list[i]);
   }
 }
 
@@ -794,7 +845,7 @@ void moter_proportional_sync(String master_moter_name) {
 void moter_integral_sync() {
   for (int i = 0; i < 4; i++) {
     if (abs(sync_error_list[i]) < DeadLine) {
-      //SerialUSB.println("continue");
+      //Serial.println("continue");
       continue;  //誤差が小さいときは積分しない
     } else {
       moter_error_total[i] += sync_error_list[i];  // 誤差を積分
@@ -802,7 +853,7 @@ void moter_integral_sync() {
 
     moter_error_total[i] = constrain(moter_error_total[i], -MAX_INTEGRAL, MAX_INTEGRAL);  //誤差の値を制限
     moter_power_list[i] += Ki_moter_sync * moter_error_total[i];
-    //SerialUSB.println(Ki_moter_sync * moter_error_total[i]);
+    //Serial.println(Ki_moter_sync * moter_error_total[i]);
   }
 }
 
@@ -813,7 +864,7 @@ void moter_differential_sync() {
     pre_sync_error_list[i] = sync_error_list[i];
     smoothed_derivative[i] = alpha * smoothed_derivative[i] + (1 - alpha) * derivative;
     moter_power_list[i] += Kd_moter_sync * smoothed_derivative[i];
-    //SerialUSB.println(smoothed_derivative[i]);
+    //Serial.println(smoothed_derivative[i]);
   }
 }
 
@@ -822,17 +873,17 @@ void moter_differential_sync() {
 //射出
 void injection() {
   if (getBtnState("A") == 1 && getBtnState("Y") == 0) {
-    //SerialUSB.println("50 HIGH");
+    //Serial.println("50 HIGH");
     digitalWrite(50, LOW);
     digitalWrite(51, HIGH);
   }
   if (getBtnState("Y") == 1 && getBtnState("A") == 0) {
-    //SerialUSB.println("51 HIGH");
+    //Serial.println("51 HIGH");
     digitalWrite(50, HIGH);
     digitalWrite(51, LOW);
   }
   if (getBtnState("Y") == 0 && getBtnState("A") == 0) {
-    //SerialUSB.println("LOW");
+    //Serial.println("LOW");
     digitalWrite(valve_a, HIGH);
     digitalWrite(valve_b, HIGH);
   }
@@ -843,12 +894,12 @@ void injection() {
 //アーム
 // --- サーボ制御 ---
 void servo_controle() {
-  if (getBtnState("R1") == 1 || getBtnState("R1") == 1) {
+  if (getBtnState("R1") == 1) {
     if (posOfServo1 > servo_min) {
       posOfServo1 -= servo1Dir;
     }
   }
-  if (getBtnState("L1") == 1 || getBtnState("L1") == 1) {
+  if (getBtnState("L1") == 1) {
     if (posOfServo1 < servo_max) {
       posOfServo1 += servo1Dir;
     }
@@ -902,6 +953,31 @@ void limit_check() {
 
 
 
+//昆虫図鑑完成時に点灯させるLED
+void LED_lighting() {
+  int right_state = getBtnState("RIGHT");
+  //この関数のみボタンが離された時ではなく押したときに働く(完成した後できるだけ早くLEDを付けたいため)
+  if (right_state == HIGH && pre_right_state != right_state) {
+    if (finish_LED_state == HIGH) {
+      finish_LED_state = LOW;
+    } else {
+      finish_LED_state = HIGH;
+    }
+  }
+  //Serial.println(finish_LED_state);
+
+  //HIGHとLOWが逆になっていることに注意
+  if (finish_LED_state == LOW) {
+    digitalWrite(finish_LED_pin, HIGH);
+  } else {
+    digitalWrite(finish_LED_pin, LOW);
+  }
+  //最後に今回の状態を前回の状態に初期化
+  pre_right_state = right_state;
+}
+
+
+
 //確認用
 void confirmation() {
   tact_check();
@@ -920,9 +996,9 @@ void tact_check() {
       }
     }
     if (tact_checker[i] == HIGH) {
-      digitalWrite(LED[i], HIGH);
+      digitalWrite(debug_LED[i], HIGH);
     } else {
-      digitalWrite(LED[i], LOW);
+      digitalWrite(debug_LED[i], LOW);
     }
     pre_tact_state[i] = tact_state;
   }
@@ -952,8 +1028,8 @@ void debug() {
 
     } else if (millis() - debug_timer < 3000) {
       if (once == 0) {
-        SerialUSB.print("A:");
-        SerialUSB.println(moter_enc_list[0]);
+        Serial.print("A:");
+        Serial.println(moter_enc_list[0]);
         once = 1;
         analogWrite(pwm_a, 0);
       }
@@ -961,45 +1037,45 @@ void debug() {
 
     } else if (millis() - debug_timer < 4000) {
       if (once == 1) {
-        SerialUSB.print("B:");
-        SerialUSB.println(moter_enc_list[1]);
+        Serial.print("B:");
+        Serial.println(moter_enc_list[1]);
         once = 0;
-              analogWrite(pwm_b, 0);
+        analogWrite(pwm_b, 0);
       }
       analogWrite(pwm_c, 200);
 
     } else if (millis() - debug_timer < 5000) {
       if (once == 0) {
-        SerialUSB.print("C:");
-        SerialUSB.println(moter_enc_list[2]);
+        Serial.print("C:");
+        Serial.println(moter_enc_list[2]);
         once = 1;
-              analogWrite(pwm_c, 0);
+        analogWrite(pwm_c, 0);
       }
       analogWrite(pwm_d, 200);
 
     } else if (millis() - debug_timer < 6000) {
       if (once == 1) {
-              analogWrite(pwm_d, 0);
-        SerialUSB.print("D:");
-        SerialUSB.println(moter_enc_list[3]);
-        SerialUSB.println();
-        SerialUSB.println("encoder check");
-        SerialUSB.println("The normal value : 1200");
-        SerialUSB.print("A:");
-        SerialUSB.print(moter_enc_list[0]);
-        SerialUSB.print(" B:");
-        SerialUSB.print(moter_enc_list[1]);
-        SerialUSB.print(" C:");
-        SerialUSB.print(moter_enc_list[2]);
-        SerialUSB.print(" D:");
-        SerialUSB.println(moter_enc_list[3]);
+        analogWrite(pwm_d, 0);
+        Serial.print("D:");
+        Serial.println(moter_enc_list[3]);
+        Serial.println();
+        Serial.println("encoder check");
+        Serial.println("The normal value : 1200");
+        Serial.print("A:");
+        Serial.print(moter_enc_list[0]);
+        Serial.print(" B:");
+        Serial.print(moter_enc_list[1]);
+        Serial.print(" C:");
+        Serial.print(moter_enc_list[2]);
+        Serial.print(" D:");
+        Serial.println(moter_enc_list[3]);
         once = 0;
       }
 
     } else if (millis() - debug_timer < 7000) {
       if (once == 0) {
-        SerialUSB.println();
-        SerialUSB.println("arm check");
+        Serial.println();
+        Serial.println("arm check");
         once = 1;
       }
       digitalWrite(MabuchimotorDir, LOW);
@@ -1011,11 +1087,11 @@ void debug() {
       if (MabuchiStop[0] == 0) {
         analogWrite(MabuchimoterPWM, MabuchimotorSpeed);
       }
-      
+
     } else if (millis() - debug_timer < 9000) {
       if (once == 1) {
-        SerialUSB.println();
-        SerialUSB.println("servo check");
+        Serial.println();
+        Serial.println("servo check");
         once = 0;
         analogWrite(MabuchimoterPWM, 0);
       }
@@ -1030,7 +1106,7 @@ void debug() {
       servo1.write(posOfServo1);
 
     } else {
-      SerialUSB.println("debug finish");
+      Serial.println("debug finish");
       tact_checker[0] = LOW;
     }
 
@@ -1052,28 +1128,35 @@ void loop() {
     parseCtlState();
   }
 
+  //デバッグ用関数
   confirmation();
+  //アームの動きに制限を加えるための関数
   limit_check();
 
   if (tact_checker[0] == LOW) {
+    //アームのサーボを制御する関数
     servo_controle();
+    //機体が縦横斜めに移動するための関数
     controller_move();
+    //期待が回転するための関数
     controller_spin();
+    //射出装置のための関数
     injection();
+    //アームの移動のための関数
     motor_control();
+    //昆虫図鑑完成時LEDを点灯させるための関数
+    LED_lighting();
   }
 
-/*
   if (moter_move_check != 0) {
-    SerialUSB.print("A:");
-    SerialUSB.print(moter_enc_list[0]);
-    SerialUSB.print(" B:");
-    SerialUSB.print(moter_enc_list[1]);
-    SerialUSB.print(" C:");
-    SerialUSB.print(moter_enc_list[2]);
-    SerialUSB.print(" D:");
-    SerialUSB.println(moter_enc_list[3]);
+    Serial.print("A:");
+    Serial.print(moter_enc_list[0]);
+    Serial.print(" B:");
+    Serial.print(moter_enc_list[1]);
+    Serial.print(" C:");
+    Serial.print(moter_enc_list[2]);
+    Serial.print(" D:");
+    Serial.println(moter_enc_list[3]);
     moter_move_check = 0;
   }
-*/
 }
