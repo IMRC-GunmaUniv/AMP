@@ -210,8 +210,8 @@ void setup() {
 
 
   //無線通信
-  Serial1.begin(115200);    // ESP用
-  Serial.begin(115200);  // PC
+  Serial1.begin(115200);  // ESP用
+  Serial.begin(115200);   // PC
 
 
   //割り込み関数の定義
@@ -1147,7 +1147,7 @@ void loop() {
     //昆虫図鑑完成時LEDを点灯させるための関数
     LED_lighting();
   }
-
+  /*
   if (moter_move_check != 0) {
     Serial.print("A:");
     Serial.print(moter_enc_list[0]);
@@ -1159,4 +1159,5 @@ void loop() {
     Serial.println(moter_enc_list[3]);
     moter_move_check = 0;
   }
+  */
 }
