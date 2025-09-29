@@ -120,7 +120,7 @@ void parseCtlState(){
 
 void setup() {
   Serial1.begin(115200); // ESP用
-  SerialUSB.begin(115200); // PC
+  Serial.begin(115200); // PC
 }
 
 
@@ -129,5 +129,5 @@ void loop() {
     //接続確認用（このif文は消さないで）
     parseCtlState();
   }
-  SerialUSB.println(getBtnState("UP"));
+  Serial.println(getBtnState("Y"));
 }

@@ -1,4 +1,3 @@
-
 #include <Servo.h>
 Servo servo1;
 
@@ -129,7 +128,7 @@ int servo_millis_timer = millis();
 int servo_interval = 50;
 
 //最大と最小
-int servo_max = 120;
+int servo_max = 80;
 int servo_min = 0;
 /*サーボ反転用
 int servo_max = 180;
@@ -969,8 +968,10 @@ void LED_lighting() {
 
   //HIGHとLOWが逆になっていることに注意
   if (finish_LED_state == LOW) {
+    //Serial.println(1);
     digitalWrite(finish_LED_pin, HIGH);
   } else {
+    //Serial.println(0);
     digitalWrite(finish_LED_pin, LOW);
   }
   //最後に今回の状態を前回の状態に初期化
@@ -1119,7 +1120,7 @@ void debug() {
 //一番左:デバッグ用（それぞれの動作確認）
 //左から二番目:足回りの基準処理を使用停止
 //左から三番目:足回りのPIDを使用停止
-//左から四番目:割り当てなし
+//左から四番目:同期処理に用いるモーターをA,CからB,Dに変更
 
 
 
