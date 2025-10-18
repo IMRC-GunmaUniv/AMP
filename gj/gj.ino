@@ -871,19 +871,53 @@ void moter_differential_sync() {
 
 
 //射出
+int currentBtnStateA = 0;
+int currentBtnStateY = 0;
+int preBtnStateA = 0;
+int preBtnStateY = 0;
+
+
+unsigned long pressStartA = 0;
+unsigned long pressStartY = 0;
+
+int presscheckA = 0;
+int presscheckY = 0;
+
 void injection() {
-  if (getBtnState("A") == 1 && getBtnState("Y") == 0) {
-    //Serial.println("50 HIGH");
-    digitalWrite(50, LOW);
-    digitalWrite(51, HIGH);
+
+  currentBtnStateA = getBtnState("A");
+  currentBtnStateY = getBtnState("Y");
+
+  if (currentBtnStateA == 1 && preBtnStateA == 0 && currentBtnStateY == 0) {
+    pressStartA = millis();
+    presscheckA = 1;
+    Serial.println("50 HIGH");
+    digitalWrite(valve_a, LOW);
+    digitalWrite(valve_b, HIGH);
   }
-  if (getBtnState("Y") == 1 && getBtnState("A") == 0) {
-    //Serial.println("51 HIGH");
-    digitalWrite(50, HIGH);
-    digitalWrite(51, LOW);
+  if (currentBtnStateY == 1 && preBtnStateY == 0 && currentBtnStateA == 0) {
+    pressStartY = millis();
+    presscheckY = 1;
+    Serial.println("51 HIGH");
+    digitalWrite(valve_a, HIGH);
+    digitalWrite(valve_b, LOW);
   }
-  if (getBtnState("Y") == 0 && getBtnState("A") == 0) {
-    //Serial.println("LOW");
+  if ((millis() - pressStartA > 50 && currentBtnStateA == 0) || (millis() - pressStartY > 50 && currentBtnStateY == 0)) {
+    Serial.println("LOW");
+    presscheckA = 0;
+    presscheckY = 0;
+  }
+
+  preBtnStateA = currentBtnStateA;
+  preBtnStateY = currentBtnStateY;
+
+  if (presscheckA == 0) {
+    pressStartA = millis();
+  }
+  if (presscheckY == 0) {
+    pressStartY = millis();
+  }
+  if (presscheckA == 0 && presscheckY == 0) {
     digitalWrite(valve_a, HIGH);
     digitalWrite(valve_b, HIGH);
   }
